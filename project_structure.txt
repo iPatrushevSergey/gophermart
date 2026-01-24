@@ -1,0 +1,57 @@
+gophermart/
+├── cmd/
+│   ├── gophermart/
+│   │   └── main.go
+│   └── accrual/
+│       └── main.go
+├── internal/
+│   ├── gophermart/
+│   │   ├── config/
+│   │   ├── domain/
+│   │   │   ├── model/
+│   │   │   └── service/
+│   │   ├── application/
+│   │   │   ├── usecase/
+│   │   │   ├── dto/
+│   │   │   └── port/
+│   │   ├── presentation/
+│   │   │   ├── http/
+│   │   │   │   └── middleware/
+│   │   │   └── factory/
+│   │   ├── adapters/
+│   │   │   ├── postgres/
+│   │   │   │   └── retry/
+│   │   │   ├── auth/
+│   │   │   ├── accrualclient/
+│   │   │   ├── clock/
+│   │   │   └── fake/
+│   │   └── app/
+│   ├── accrual/
+│   │   ├── config/
+│   │   ├── domain/
+│   │   │   ├── model/
+│   │   │   └── service/
+│   │   ├── application/
+│   │   │   ├── usecase/
+│   │   │   ├── dto/
+│   │   │   └── port/
+│   │   ├── presentation/
+│   │   │   ├── http/
+│   │   │   │   └── middleware/
+│   │   │   └── factory/
+│   │   ├── adapters/
+│   │   │   ├── postgres/
+│   │   │   │   └── retry/
+│   │   │   ├── clock/
+│   │   │   └── fake/
+│   │   └── app/
+│   └── shared/
+│       ├── logger/
+│       ├── http/
+│       ├── luhn/
+│       ├── hash/
+│       └── retry/
+├── migrations/
+│   ├── gophermart/
+│   └── accrual/
+└── README.md
