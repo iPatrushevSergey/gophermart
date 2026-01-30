@@ -6,8 +6,8 @@ import (
 	"gophermart/internal/gophermart/domain/vo"
 )
 
-// Withdrawal — факт списания баллов в счёт оплаты заказа.
-// Иммутабельное событие: создаётся один раз, не меняется.
+// Withdrawal — the fact that points were deducted from the payment for the order.
+// Immutable event: created once, does not change.
 type Withdrawal struct {
 	UserID      vo.UserID
 	OrderNumber vo.OrderNumber
