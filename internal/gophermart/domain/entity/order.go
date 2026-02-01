@@ -6,8 +6,7 @@ import (
 	"gophermart/internal/gophermart/domain/vo"
 )
 
-// OrderStatus — статус расчёта заказа в системе лояльности.
-// В API/домене — строки; в БД храним SMALLINT (маппинг в адаптере).
+// OrderStatus is the order calculation status in the loyalty system.
 const (
 	OrderStatusNew        OrderStatus = "NEW"
 	OrderStatusProcessing OrderStatus = "PROCESSING"
@@ -17,8 +16,7 @@ const (
 
 type OrderStatus string
 
-// Order — the order uploaded by the user for calculating points.
-// Identification by Number (natural key); surrogate id only in the database.
+// Order is the order uploaded by the user for calculating points. Identified by Number (natural key).
 type Order struct {
 	Number      vo.OrderNumber
 	UserID      vo.UserID
@@ -42,7 +40,7 @@ func (o *Order) MarkInvalid(now time.Time) {
 	o.ProcessedAt = &now
 }
 
-// MarkProcessing transfers the order to processing (awaiting a response from accrual).
+// MarkProcessing sets the order status to processing.
 func (o *Order) MarkProcessing() {
 	o.Status = OrderStatusProcessing
 }
