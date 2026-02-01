@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// User — the essence of the loyalty system user.
+// User is the loyalty system user.
 type User struct {
 	ID           vo.UserID
 	Login        string
