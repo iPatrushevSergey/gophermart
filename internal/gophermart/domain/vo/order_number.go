@@ -5,8 +5,7 @@ import "gophermart/internal/shared/luhn"
 // Order number.
 type OrderNumber string
 
-// NewOrderNumber creates OrderNumber only if s passes the luhn check.
-// Otherwise, it returns an error.
+// NewOrderNumber parses s as OrderNumber; returns error if Luhn check fails.
 func NewOrderNumber(s string) (OrderNumber, error) {
 	if !luhn.Valid(s) {
 		return "", ErrInvalidOrderNumber
@@ -14,7 +13,7 @@ func NewOrderNumber(s string) (OrderNumber, error) {
 	return OrderNumber(s), nil
 }
 
-// String returns a string representation of a number.
+// String returns the order number as string.
 func (n OrderNumber) String() string {
 	return string(n)
 }
