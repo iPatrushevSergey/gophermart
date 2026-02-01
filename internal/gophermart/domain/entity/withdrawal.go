@@ -6,8 +6,7 @@ import (
 	"gophermart/internal/gophermart/domain/vo"
 )
 
-// Withdrawal — the fact that points were deducted from the payment for the order.
-// Immutable event: created once, does not change.
+// Withdrawal is the record of points deducted for an order.
 type Withdrawal struct {
 	UserID      vo.UserID
 	OrderNumber vo.OrderNumber
