@@ -9,17 +9,17 @@ import (
 
 var ErrInsufficientBalance = errors.New("insufficient balance")
 
-// BalanceAccount — user loyalty account.
+// BalanceAccount is the user loyalty account.
 type BalanceAccount struct {
 	UserID         vo.UserID
 	Current        vo.Points
 	WithdrawnTotal vo.Points
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
-	Version        int64 // for optimistic locking in the database
+	Version        int64
 }
 
-// AddAccrual adds points to the account. now is the time of the operation.
+// AddAccrual adds points to the account.
 func (a *BalanceAccount) AddAccrual(amount vo.Points, now time.Time) {
 	if amount <= 0 {
 		return
@@ -28,7 +28,7 @@ func (a *BalanceAccount) AddAccrual(amount vo.Points, now time.Time) {
 	a.UpdatedAt = now
 }
 
-// Withdraw deducts points. Returns ErrInsufficientBalance if there are not enough funds.
+// Withdraw deducts points; returns ErrInsufficientBalance if balance is too low.
 func (a *BalanceAccount) Withdraw(amount vo.Points, now time.Time) error {
 	if amount <= 0 {
 		return nil
