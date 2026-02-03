@@ -1,0 +1,53 @@
+package middleware
+
+import (
+	"net/http"
+	"strings"
+
+	"gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/domain/vo"
+	"github.com/gin-gonic/gin"
+)
+
+// CookieName is the name of the auth cookie.
+const CookieName = "token"
+
+// ContextUserIDKey is the key for UserID in Gin context.
+const ContextUserIDKey = "user_id"
+
+// Auth extracts the token from cookie or Authorization: Bearer, validates it, and sets UserID in context.
+func Auth(tokens port.TokenProvider) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := ""
+		if t, err := c.Cookie(CookieName); err == nil && t != "" {
+			token = t
+		}
+		if token == "" {
+			auth := c.GetHeader("Authorization")
+			if strings.HasPrefix(auth, "Bearer ") {
+				token = strings.TrimPrefix(auth, "Bearer ")
+			}
+		}
+		if token == "" {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		userID, err := tokens.Validate(token)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		c.Set(ContextUserIDKey, userID)
+		c.Next()
+	}
+}
+
+// UserID returns the authenticated user's ID from context.
+func UserID(c *gin.Context) (vo.UserID, bool) {
+	v, ok := c.Get(ContextUserIDKey)
+	if !ok {
+		return 0, false
+	}
+	id, ok := v.(vo.UserID)
+	return id, ok
+}
