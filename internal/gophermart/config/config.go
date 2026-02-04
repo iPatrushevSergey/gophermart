@@ -163,10 +163,3 @@ func LoadConfig() (Config, error) {
 
 	return finalCfg, nil
 }
-
-func getEnvOrDefault(key, def string) string {
-	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
-		return v
-	}
-	return def
-}
