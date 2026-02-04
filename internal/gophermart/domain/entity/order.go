@@ -16,12 +16,12 @@ const (
 
 type OrderStatus string
 
-// Order is the order uploaded by the user for calculating points. Identified by Number (natural key).
+// Order is the order uploaded by the user for calculating points.
 type Order struct {
 	Number      vo.OrderNumber
 	UserID      vo.UserID
 	Status      OrderStatus
-	Accrual     *vo.Points // nil, no accrual yet, or INVALID
+	Accrual     *vo.Points // nil (no accrual yet or INVALID)
 	UploadedAt  time.Time
 	ProcessedAt *time.Time
 }
