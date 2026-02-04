@@ -7,8 +7,8 @@ import (
 	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
 	"gophermart/internal/gophermart/presentation/factory"
-	"gophermart/internal/gophermart/presentation/http/middleware"
 	httpdto "gophermart/internal/gophermart/presentation/http/dto"
+	"gophermart/internal/gophermart/presentation/http/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,11 +17,12 @@ import (
 type UserHandler struct {
 	factory factory.UseCaseFactory
 	tokens  port.TokenProvider
+	log     port.Logger
 }
 
-// NewUserHandler creates a UserHandler with use case factory and token provider.
-func NewUserHandler(factory factory.UseCaseFactory, tokens port.TokenProvider) *UserHandler {
-	return &UserHandler{factory: factory, tokens: tokens}
+// NewUserHandler creates a UserHandler with use case factory, token provider and logger.
+func NewUserHandler(factory factory.UseCaseFactory, tokens port.TokenProvider, log port.Logger) *UserHandler {
+	return &UserHandler{factory: factory, tokens: tokens, log: log}
 }
 
 // Register creates a new user and issues auth token.
@@ -40,11 +41,13 @@ func (h *UserHandler) Register(c *gin.Context) {
 			c.AbortWithStatus(http.StatusConflict)
 			return
 		}
+		h.log.Error("register use case failed", "error", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	token, err := h.tokens.Issue(userID)
 	if err != nil {
+		h.log.Error("failed to issue token", "error", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -68,11 +71,13 @@ func (h *UserHandler) Login(c *gin.Context) {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+		h.log.Error("login use case failed", "error", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	token, err := h.tokens.Issue(userID)
 	if err != nil {
+		h.log.Error("failed to issue token", "error", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
