@@ -1,5 +1,7 @@
 package dto
 
+//go:generate easyjson -all $GOFILE
+
 // RegisterRequest is the HTTP request body for registration.
 type RegisterRequest struct {
 	Login    string `json:"login" binding:"required"`
