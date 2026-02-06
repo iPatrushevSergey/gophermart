@@ -11,7 +11,7 @@ import (
 	"gophermart/internal/gophermart/presentation/http/handler"
 )
 
-// App holds the HTTP server and dependencies (for graceful shutdown, etc.).
+// App holds the HTTP server and dependencies.
 type App struct {
 	Server *http.Server
 }
@@ -24,7 +24,7 @@ func NewApp(cfg config.Config, log port.Logger) *App {
 	userSvc := service.UserService{}
 	ucFactory := NewUseCaseFactory(userRepo, hasher, tokens, userSvc)
 	userHandler := handler.NewUserHandler(ucFactory, tokens, log)
-	router := NewRouter(userHandler, tokens)
+	router := NewRouter(userHandler, tokens, log)
 
 	srv := &http.Server{
 		Addr:    cfg.ServerAddress,
