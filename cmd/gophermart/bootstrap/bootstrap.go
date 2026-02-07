@@ -20,7 +20,13 @@ func Run() error {
 	}
 	defer log.Sync()
 
-	log.Debug("starting server", "address", cfg.ServerAddress, "log_level", cfg.LogLevel)
+	log.Debug("starting server",
+		"address", cfg.ServerAddress,
+		"accrual_address", cfg.AccrualAddress,
+		"jwt_ttl", cfg.JWTTTL,
+		"log_level", cfg.LogLevel,
+		"bcrypt_cost", cfg.BCryptCost,
+	)
 
 	app := NewApp(cfg, log)
 	StartServer(app.Server, log)
