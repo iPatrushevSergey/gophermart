@@ -19,7 +19,7 @@ type App struct {
 // NewApp wires dependencies and returns the application (composition root).
 func NewApp(cfg config.Config, log port.Logger) *App {
 	userRepo := fake.NewUserRepository()
-	hasher := auth.NewBCryptHasher()
+	hasher := auth.NewBCryptHasher(cfg.BCryptCost)
 	tokens := auth.NewJWTProvider(cfg.JWTSecret, cfg.JWTTTL)
 	userSvc := service.UserService{}
 	ucFactory := NewUseCaseFactory(userRepo, hasher, tokens, userSvc)
