@@ -1,6 +1,6 @@
 .PHONY: build run
 
-# Build with gojson for faster JSON (high-load)
+# go_json: Gin uses goccy/go-json instead of encoding/json for binding/rendering
 build:
 	go build -tags=go_json -o bin/gophermart ./cmd/gophermart
 
