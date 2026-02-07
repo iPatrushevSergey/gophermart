@@ -1,13 +1,12 @@
 package vo
 
-import "gophermart/internal/shared/luhn"
-
-// Order number.
+// OrderNumber is the order number value object.
 type OrderNumber string
 
-// NewOrderNumber parses s as OrderNumber; returns error if Luhn check fails.
-func NewOrderNumber(s string) (OrderNumber, error) {
-	if !luhn.Valid(s) {
+// NewOrderNumber parses s as OrderNumber; returns error if validation fails.
+// Caller must inject OrderNumberValidator (e.g. from adapters).
+func NewOrderNumber(v OrderNumberValidator, s string) (OrderNumber, error) {
+	if v == nil || !v.Valid(s) {
 		return "", ErrInvalidOrderNumber
 	}
 	return OrderNumber(s), nil
