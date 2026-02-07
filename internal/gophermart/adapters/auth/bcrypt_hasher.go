@@ -1,24 +1,22 @@
 package auth
 
 import (
-	"gophermart/internal/gophermart/application/port"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
-const bcryptCost = bcrypt.DefaultCost
-
 // BCryptHasher hashes and verifies passwords with bcrypt.
-type BCryptHasher struct{}
+type BCryptHasher struct {
+	cost int
+}
 
-// NewBCryptHasher returns a new bcrypt hasher.
-func NewBCryptHasher() *BCryptHasher {
-	return &BCryptHasher{}
+// NewBCryptHasher returns a new bcrypt hasher with the given cost (4-31).
+func NewBCryptHasher(cost int) *BCryptHasher {
+	return &BCryptHasher{cost: cost}
 }
 
 // Hash hashes the plain password.
 func (h *BCryptHasher) Hash(plain string) (string, error) {
-	b, err := bcrypt.GenerateFromPassword([]byte(plain), bcryptCost)
+	b, err := bcrypt.GenerateFromPassword([]byte(plain), h.cost)
 	if err != nil {
 		return "", err
 	}
@@ -29,5 +27,3 @@ func (h *BCryptHasher) Hash(plain string) (string, error) {
 func (h *BCryptHasher) Compare(plain, hash string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(plain)) == nil
 }
-
-var _ port.PasswordHasher = (*BCryptHasher)(nil)
