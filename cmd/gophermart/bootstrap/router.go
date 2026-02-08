@@ -13,13 +13,17 @@ import (
 func NewRouter(userHandler *handler.UserHandler, tokens port.TokenProvider, log port.Logger) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(middleware.Logger(log))
+
+	// Middleware with injected strategies (OCP compliant)
+	r.Use(middleware.Compress(log, middleware.NewGzipCompressor()))
+	r.Use(middleware.Logger(log, nil)) // nil uses DefaultLogFormatter
+
 	api := r.Group("/api/user")
 	{
 		api.POST("/register", userHandler.Register)
 		api.POST("/login", userHandler.Login)
 		protected := api.Group("")
-		protected.Use(middleware.Auth(tokens))
+		protected.Use(middleware.Auth(nil, tokens)) // nil uses BearerTokenExtractor
 		{
 			// protected.GET("/orders", ...)
 			// protected.GET("/balance", ...)
