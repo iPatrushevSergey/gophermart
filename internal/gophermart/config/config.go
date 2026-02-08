@@ -53,10 +53,12 @@ func LoadConfig() (Config, error) {
 	fs.StringVar(&cfg.LogLevel, "l", "info", "logging level")
 	fs.Var(&cfg.BCryptCost, "bcrypt-cost", "bcrypt cost factor (4-31)")
 
+	// Flags
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return Config{}, fmt.Errorf("flag parsing error: %w", err)
 	}
 
+	// Env
 	if err := env.Parse(&cfg); err != nil {
 		return Config{}, fmt.Errorf("ENV parsing error: %w", err)
 	}
