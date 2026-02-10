@@ -14,18 +14,19 @@ func Run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	log, err := logger.Initialize(cfg.LogLevel)
+	log, err := logger.Initialize(cfg.Log.Level)
 	if err != nil {
 		return fmt.Errorf("init logger: %w", err)
 	}
 	defer log.Sync()
 
 	log.Debug("starting server",
-		"address", cfg.ServerAddress,
-		"accrual_address", cfg.AccrualAddress,
-		"jwt_ttl", cfg.JWTTTL,
-		"log_level", cfg.LogLevel,
-		"bcrypt_cost", cfg.BCryptCost,
+		"address", cfg.Server.Address,
+		"accrual_address", cfg.Accrual.Address,
+		"database", cfg.DB.URI,
+		"jwt_ttl", cfg.Auth.JWTTTL,
+		"log_level", cfg.Log.Level,
+		"bcrypt_cost", cfg.Auth.BCryptCost,
 	)
 
 	app := NewApp(cfg, log)
