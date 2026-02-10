@@ -19,15 +19,15 @@ type App struct {
 // NewApp wires dependencies and returns the application (composition root).
 func NewApp(cfg config.Config, log port.Logger) *App {
 	userRepo := fake.NewUserRepository()
-	hasher := auth.NewBCryptHasher(cfg.BCryptCost)
-	tokens := auth.NewJWTProvider(cfg.JWTSecret, cfg.JWTTTL)
+	hasher := auth.NewBCryptHasher(cfg.Auth.BCryptCost)
+	tokens := auth.NewJWTProvider(cfg.Auth.JWTSecret, cfg.Auth.JWTTTL)
 	userSvc := service.UserService{}
 	ucFactory := NewUseCaseFactory(userRepo, hasher, tokens, userSvc)
 	userHandler := handler.NewUserHandler(ucFactory, tokens, log)
 	router := NewRouter(userHandler, tokens, log)
 
 	srv := &http.Server{
-		Addr:    cfg.ServerAddress,
+		Addr:    cfg.Server.Address,
 		Handler: router,
 	}
 	return &App{Server: srv}
