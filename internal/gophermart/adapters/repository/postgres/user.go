@@ -21,43 +21,48 @@ func NewUserRepository(transactor *Transactor) *UserRepository {
 }
 
 func (r *UserRepository) Create(ctx context.Context, u *entity.User) error {
-	q := r.transactor.GetQuerier(ctx)
+	return DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+		q := r.transactor.GetQuerier(ctx)
 
-	sql := `
-		INSERT INTO users (login, password_hash, created_at, updated_at)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id
-	`
+		query := `
+			INSERT INTO users (login, password_hash, created_at, updated_at)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id
+		`
 
-	err := q.QueryRow(ctx, sql, u.Login, u.PasswordHash, u.CreatedAt, u.UpdatedAt).Scan(&u.ID)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return application.ErrAlreadyExists
+		err := q.QueryRow(ctx, query, u.Login, u.PasswordHash, u.CreatedAt, u.UpdatedAt).Scan(&u.ID)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				return application.ErrAlreadyExists
+			}
+			return err
 		}
-		return err
-	}
 
-	return nil
+		return nil
+	})
 }
 
 func (r *UserRepository) FindByID(ctx context.Context, id vo.UserID) (*entity.User, error) {
-	q := r.transactor.GetQuerier(ctx)
-
-	sql := `
-		SELECT id, login, password_hash, created_at, updated_at
-		FROM users
-		WHERE id = $1
-	`
-
 	var u entity.User
-	err := q.QueryRow(ctx, sql, id).Scan(
-		&u.ID,
-		&u.Login,
-		&u.PasswordHash,
-		&u.CreatedAt,
-		&u.UpdatedAt,
-	)
+
+	err := DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+		q := r.transactor.GetQuerier(ctx)
+
+		query := `
+			SELECT id, login, password_hash, created_at, updated_at
+			FROM users
+			WHERE id = $1
+		`
+
+		return q.QueryRow(ctx, query, id).Scan(
+			&u.ID,
+			&u.Login,
+			&u.PasswordHash,
+			&u.CreatedAt,
+			&u.UpdatedAt,
+		)
+	})
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -70,22 +75,25 @@ func (r *UserRepository) FindByID(ctx context.Context, id vo.UserID) (*entity.Us
 }
 
 func (r *UserRepository) FindByLogin(ctx context.Context, login string) (*entity.User, error) {
-	q := r.transactor.GetQuerier(ctx)
-
-	sql := `
-		SELECT id, login, password_hash, created_at, updated_at
-		FROM users
-		WHERE login = $1
-	`
-
 	var u entity.User
-	err := q.QueryRow(ctx, sql, login).Scan(
-		&u.ID,
-		&u.Login,
-		&u.PasswordHash,
-		&u.CreatedAt,
-		&u.UpdatedAt,
-	)
+
+	err := DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+		q := r.transactor.GetQuerier(ctx)
+
+		query := `
+			SELECT id, login, password_hash, created_at, updated_at
+			FROM users
+			WHERE login = $1
+		`
+
+		return q.QueryRow(ctx, query, login).Scan(
+			&u.ID,
+			&u.Login,
+			&u.PasswordHash,
+			&u.CreatedAt,
+			&u.UpdatedAt,
+		)
+	})
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
