@@ -16,6 +16,7 @@ type Config struct {
 	Auth    AuthConfig
 	Accrual AccrualConfig
 	Log     LogConfig
+	Retry   RetryConfig
 }
 
 // ServerConfig holds HTTP server settings.
@@ -48,6 +49,13 @@ type AccrualConfig struct {
 // LogConfig holds logging settings.
 type LogConfig struct {
 	Level string
+}
+
+// RetryConfig holds retry settings for transient errors (DB, HTTP, etc.).
+type RetryConfig struct {
+	MaxRetries int
+	BaseDelay  time.Duration
+	MaxDelay   time.Duration
 }
 
 type internalConfig struct {
@@ -125,6 +133,11 @@ func LoadConfig() (Config, error) {
 		},
 		Log: LogConfig{
 			Level: cfg.LogLevel,
+		},
+		Retry: RetryConfig{
+			MaxRetries: 3,
+			BaseDelay:  100 * time.Millisecond,
+			MaxDelay:   2 * time.Second,
 		},
 	}, nil
 }
