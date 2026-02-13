@@ -10,7 +10,12 @@ import (
 
 // NewRouter builds the Gin engine with all routes and middleware (composition root).
 // Auth middleware applies only to routes registered inside the protected group.
-func NewRouter(userHandler *handler.UserHandler, tokens port.TokenProvider, log port.Logger) *gin.Engine {
+func NewRouter(
+	userHandler *handler.UserHandler,
+	orderHandler *handler.OrderHandler,
+	tokens port.TokenProvider,
+	log port.Logger,
+) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
@@ -22,14 +27,12 @@ func NewRouter(userHandler *handler.UserHandler, tokens port.TokenProvider, log 
 	{
 		api.POST("/register", userHandler.Register)
 		api.POST("/login", userHandler.Login)
+
 		protected := api.Group("")
 		protected.Use(middleware.Auth(nil, tokens)) // nil uses BearerTokenExtractor
 		{
-			// protected.GET("/orders", ...)
-			// protected.GET("/balance", ...)
-			// protected.POST("/orders", ...)
-			// protected.POST("/balance/withdraw", ...)
-			// protected.GET("/withdrawals", ...)
+			protected.POST("/orders", orderHandler.Upload)
+			protected.GET("/orders", orderHandler.List)
 		}
 	}
 	return r
