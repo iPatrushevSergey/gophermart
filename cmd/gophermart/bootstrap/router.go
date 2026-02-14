@@ -13,6 +13,7 @@ import (
 func NewRouter(
 	userHandler *handler.UserHandler,
 	orderHandler *handler.OrderHandler,
+	balanceHandler *handler.BalanceHandler,
 	tokens port.TokenProvider,
 	log port.Logger,
 ) *gin.Engine {
@@ -33,6 +34,9 @@ func NewRouter(
 		{
 			protected.POST("/orders", orderHandler.Upload)
 			protected.GET("/orders", orderHandler.List)
+			protected.GET("/balance", balanceHandler.Get)
+			protected.POST("/balance/withdraw", balanceHandler.Withdraw)
+			protected.GET("/withdrawals", balanceHandler.ListWithdrawals)
 		}
 	}
 	return r
