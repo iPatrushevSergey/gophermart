@@ -20,7 +20,10 @@ func NewLoginUser(userRepo port.UserRepository, hasher port.PasswordHasher) port
 	return &LoginUser{userRepo: userRepo, hasher: hasher}
 }
 
-// Execute checks credentials; returns user ID or application.ErrInvalidCredentials.
+// Execute checks credentials and returns the user ID.
+//
+// Errors:
+//   - application.ErrInvalidCredentials — wrong login or password
 func (uc *LoginUser) Execute(ctx context.Context, in dto.LoginInput) (vo.UserID, error) {
 	u, err := uc.userRepo.FindByLogin(ctx, in.Login)
 	if err != nil {
