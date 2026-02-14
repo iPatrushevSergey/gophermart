@@ -5,16 +5,10 @@ import (
 	"strings"
 
 	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/presentation/http/httpcontext"
 
 	"github.com/gin-gonic/gin"
 )
-
-// CookieName is the name of the auth cookie.
-const CookieName = "token"
-
-// ContextUserIDKey is the key for UserID in Gin context.
-const ContextUserIDKey = "user_id"
 
 // TokenExtractor abstraction for retrieving auth token from request.
 type TokenExtractor interface {
@@ -26,7 +20,7 @@ type BearerTokenExtractor struct{}
 
 func (e *BearerTokenExtractor) Extract(c *gin.Context) (string, error) {
 	token := ""
-	if t, err := c.Cookie(CookieName); err == nil && t != "" {
+	if t, err := c.Cookie(httpcontext.CookieName); err == nil && t != "" {
 		token = t
 	}
 	if token == "" {
@@ -55,17 +49,7 @@ func Auth(extractor TokenExtractor, tokens port.TokenProvider) gin.HandlerFunc {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		c.Set(ContextUserIDKey, userID)
+		c.Set(httpcontext.UserIDKey, userID)
 		c.Next()
 	}
-}
-
-// UserID returns the authenticated user's ID from context.
-func UserID(c *gin.Context) (vo.UserID, bool) {
-	v, ok := c.Get(ContextUserIDKey)
-	if !ok {
-		return 0, false
-	}
-	id, ok := v.(vo.UserID)
-	return id, ok
 }
