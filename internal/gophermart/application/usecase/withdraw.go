@@ -1,0 +1,89 @@
+package usecase
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"gophermart/internal/gophermart/application"
+	"gophermart/internal/gophermart/application/dto"
+	"gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/domain/entity"
+	"gophermart/internal/gophermart/domain/service"
+	"gophermart/internal/gophermart/domain/vo"
+)
+
+// Withdraw handles deducting points from the user's balance for an order.
+type Withdraw struct {
+	balanceRepo       port.BalanceAccountRepository
+	withdrawalRepo    port.WithdrawalRepository
+	transactor        port.Transactor
+	validator         vo.OrderNumberValidator
+	withdrawalSvc     service.WithdrawalService
+	optimisticRetries int
+}
+
+// NewWithdraw returns the withdraw use case.
+func NewWithdraw(
+	balanceRepo port.BalanceAccountRepository,
+	withdrawalRepo port.WithdrawalRepository,
+	transactor port.Transactor,
+	validator vo.OrderNumberValidator,
+	withdrawalSvc service.WithdrawalService,
+	optimisticRetries int,
+) port.UseCase[dto.WithdrawInput, struct{}] {
+	return &Withdraw{
+		balanceRepo:       balanceRepo,
+		withdrawalRepo:    withdrawalRepo,
+		transactor:        transactor,
+		validator:         validator,
+		withdrawalSvc:     withdrawalSvc,
+		optimisticRetries: optimisticRetries,
+	}
+}
+
+// Execute validates the order number, deducts points, and creates a withdrawal record in a transaction.
+// Retries the entire transaction on optimistic lock conflicts.
+//
+// Errors:
+//   - application.ErrInvalidOrderNumber — order number failed Luhn check
+//   - application.ErrInsufficientBalance — not enough points on the account
+//   - application.ErrNotFound — balance account does not exist
+func (uc *Withdraw) Execute(ctx context.Context, in dto.WithdrawInput) (struct{}, error) {
+	orderNumber, err := vo.NewOrderNumber(uc.validator, in.OrderNumber)
+	if err != nil {
+		return struct{}{}, application.ErrInvalidOrderNumber
+	}
+
+	err = application.WithOptimisticRetry(uc.optimisticRetries, func() error {
+		return uc.transactor.RunInTransaction(ctx, func(ctx context.Context) error {
+			acc, err := uc.balanceRepo.FindByUserID(ctx, in.UserID)
+			if err != nil {
+				return err
+			}
+
+			now := time.Now()
+
+			if err := acc.Withdraw(vo.Points(in.Sum), now); err != nil {
+				return err
+			}
+
+			w := uc.withdrawalSvc.Create(in.UserID, orderNumber, vo.Points(in.Sum), now)
+
+			if err := uc.withdrawalRepo.Create(ctx, &w); err != nil {
+				return err
+			}
+
+			return uc.balanceRepo.Update(ctx, acc)
+		})
+	})
+
+	if err != nil {
+		if errors.Is(err, entity.ErrInsufficientBalance) {
+			return struct{}{}, application.ErrInsufficientBalance
+		}
+		return struct{}{}, err
+	}
+
+	return struct{}{}, nil
+}
