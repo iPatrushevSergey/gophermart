@@ -11,19 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// ErrOptimisticLock is returned when an UPDATE with version check affects 0 rows.
-var ErrOptimisticLock = errors.New("optimistic lock: version conflict")
-
 // IsRetriable checks whether a PostgreSQL or network error is transient and the operation can be retried.
 // Reference: https://www.postgresql.org/docs/current/errcodes-appendix.html
 func IsRetriable(err error) bool {
 	if err == nil {
 		return false
-	}
-
-	// Optimistic locking conflict — retry with fresh data
-	if errors.Is(err, ErrOptimisticLock) {
-		return true
 	}
 
 	// Network-level errors (connection refused, timeout, broken pipe, EOF)
