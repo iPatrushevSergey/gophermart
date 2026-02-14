@@ -12,7 +12,6 @@ import (
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/vo"
 	"gophermart/internal/gophermart/presentation/factory"
 	httpdto "gophermart/internal/gophermart/presentation/http/dto"
 	"gophermart/internal/gophermart/presentation/http/httpcontext"
@@ -59,7 +58,7 @@ func (h *OrderHandler) Upload(c *gin.Context) {
 			c.Status(http.StatusOK)
 		case errors.Is(err, application.ErrConflict):
 			c.AbortWithStatus(http.StatusConflict)
-		case errors.Is(err, vo.ErrInvalidOrderNumber):
+		case errors.Is(err, application.ErrInvalidOrderNumber):
 			c.AbortWithStatusJSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid order number"})
 		default:
 			h.log.Error("upload order failed", "error", err)
