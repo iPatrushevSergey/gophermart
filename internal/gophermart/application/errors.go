@@ -20,4 +20,7 @@ var (
 
 	// ErrInvalidOrderNumber — order number failed validation (e.g. Luhn check).
 	ErrInvalidOrderNumber = errors.New("invalid order number")
+
+	// ErrOptimisticLock — concurrent modification detected, operation should be retried.
+	ErrOptimisticLock = errors.New("optimistic lock conflict")
 )
