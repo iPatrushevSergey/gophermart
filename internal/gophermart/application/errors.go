@@ -14,4 +14,10 @@ var (
 
 	// ErrInvalidCredentials — wrong login or password.
 	ErrInvalidCredentials = errors.New("invalid credentials")
+
+	// ErrInsufficientBalance — not enough points on the balance account.
+	ErrInsufficientBalance = errors.New("insufficient balance")
+
+	// ErrInvalidOrderNumber — order number failed validation (e.g. Luhn check).
+	ErrInvalidOrderNumber = errors.New("invalid order number")
 )
