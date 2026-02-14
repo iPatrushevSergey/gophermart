@@ -10,6 +10,15 @@ import (
 // BalanceService performs loyalty balance operations.
 type BalanceService struct{}
 
+// CreateAccount builds a new BalanceAccount with zero balance for the given user.
+func (BalanceService) CreateAccount(userID vo.UserID, now time.Time) *entity.BalanceAccount {
+	return &entity.BalanceAccount{
+		UserID:    userID,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
+
 // ApplyAccrual adds points to the account.
 func (BalanceService) ApplyAccrual(acc *entity.BalanceAccount, amount vo.Points, now time.Time) {
 	acc.AddAccrual(amount, now)
