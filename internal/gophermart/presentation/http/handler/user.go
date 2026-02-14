@@ -8,12 +8,12 @@ import (
 	"gophermart/internal/gophermart/application/port"
 	"gophermart/internal/gophermart/presentation/factory"
 	httpdto "gophermart/internal/gophermart/presentation/http/dto"
-	"gophermart/internal/gophermart/presentation/http/middleware"
+	"gophermart/internal/gophermart/presentation/http/httpcontext"
 
 	"github.com/gin-gonic/gin"
 )
 
-// UserHandler handles POST /api/user/register and POST /api/user/login.
+// UserHandler manages registration and authentication requests.
 type UserHandler struct {
 	factory factory.UseCaseFactory
 	tokens  port.TokenProvider
@@ -25,7 +25,7 @@ func NewUserHandler(factory factory.UseCaseFactory, tokens port.TokenProvider, l
 	return &UserHandler{factory: factory, tokens: tokens, log: log}
 }
 
-// Register creates a new user and issues auth token.
+// Register creates a new user and issues an auth token.
 func (h *UserHandler) Register(c *gin.Context) {
 	var req httpdto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -55,7 +55,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-// Login authenticates user and issues auth token.
+// Login authenticates a user and issues an auth token.
 func (h *UserHandler) Login(c *gin.Context) {
 	var req httpdto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -88,7 +88,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 // setAuthToken writes the token to cookie and Authorization header.
 func setAuthToken(c *gin.Context, token string) {
 	cookie := &http.Cookie{
-		Name:     middleware.CookieName,
+		Name:     httpcontext.CookieName,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
