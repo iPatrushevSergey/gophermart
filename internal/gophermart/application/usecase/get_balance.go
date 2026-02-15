@@ -10,12 +10,12 @@ import (
 
 // GetBalance returns the current balance for the given user.
 type GetBalance struct {
-	balanceRepo port.BalanceAccountRepository
+	balanceReader port.BalanceAccountReader
 }
 
 // NewGetBalance returns the get balance use case.
-func NewGetBalance(balanceRepo port.BalanceAccountRepository) port.UseCase[vo.UserID, dto.BalanceOutput] {
-	return &GetBalance{balanceRepo: balanceRepo}
+func NewGetBalance(balanceReader port.BalanceAccountReader) port.UseCase[vo.UserID, dto.BalanceOutput] {
+	return &GetBalance{balanceReader: balanceReader}
 }
 
 // Execute loads the balance account and maps it to BalanceOutput.
@@ -23,7 +23,7 @@ func NewGetBalance(balanceRepo port.BalanceAccountRepository) port.UseCase[vo.Us
 // Errors:
 //   - application.ErrNotFound — balance account does not exist
 func (uc *GetBalance) Execute(ctx context.Context, userID vo.UserID) (dto.BalanceOutput, error) {
-	acc, err := uc.balanceRepo.FindByUserID(ctx, userID)
+	acc, err := uc.balanceReader.FindByUserID(ctx, userID)
 	if err != nil {
 		return dto.BalanceOutput{}, err
 	}
