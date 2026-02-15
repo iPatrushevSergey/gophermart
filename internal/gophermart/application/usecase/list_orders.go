@@ -10,18 +10,18 @@ import (
 
 // ListOrders returns all orders uploaded by the given user.
 type ListOrders struct {
-	orderRepo port.OrderRepository
+	orderReader port.OrderReader
 }
 
 // NewListOrders returns the list orders use case.
-func NewListOrders(orderRepo port.OrderRepository) port.UseCase[vo.UserID, []dto.OrderOutput] {
-	return &ListOrders{orderRepo: orderRepo}
+func NewListOrders(orderReader port.OrderReader) port.UseCase[vo.UserID, []dto.OrderOutput] {
+	return &ListOrders{orderReader: orderReader}
 }
 
 // Execute fetches orders and maps them to output DTOs.
 // Returns an empty slice if the user has no orders.
 func (uc *ListOrders) Execute(ctx context.Context, userID vo.UserID) ([]dto.OrderOutput, error) {
-	orders, err := uc.orderRepo.ListByUserID(ctx, userID)
+	orders, err := uc.orderReader.ListByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
