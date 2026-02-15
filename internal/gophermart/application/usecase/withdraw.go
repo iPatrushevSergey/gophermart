@@ -15,8 +15,9 @@ import (
 
 // Withdraw handles deducting points from the user's balance for an order.
 type Withdraw struct {
-	balanceRepo       port.BalanceAccountRepository
-	withdrawalRepo    port.WithdrawalRepository
+	balanceReader     port.BalanceAccountReader
+	balanceWriter     port.BalanceAccountWriter
+	withdrawalWriter  port.WithdrawalWriter
 	transactor        port.Transactor
 	validator         vo.OrderNumberValidator
 	withdrawalSvc     service.WithdrawalService
@@ -25,16 +26,18 @@ type Withdraw struct {
 
 // NewWithdraw returns the withdraw use case.
 func NewWithdraw(
-	balanceRepo port.BalanceAccountRepository,
-	withdrawalRepo port.WithdrawalRepository,
+	balanceReader port.BalanceAccountReader,
+	balanceWriter port.BalanceAccountWriter,
+	withdrawalWriter port.WithdrawalWriter,
 	transactor port.Transactor,
 	validator vo.OrderNumberValidator,
 	withdrawalSvc service.WithdrawalService,
 	optimisticRetries int,
 ) port.UseCase[dto.WithdrawInput, struct{}] {
 	return &Withdraw{
-		balanceRepo:       balanceRepo,
-		withdrawalRepo:    withdrawalRepo,
+		balanceReader:     balanceReader,
+		balanceWriter:     balanceWriter,
+		withdrawalWriter:  withdrawalWriter,
 		transactor:        transactor,
 		validator:         validator,
 		withdrawalSvc:     withdrawalSvc,
@@ -57,7 +60,7 @@ func (uc *Withdraw) Execute(ctx context.Context, in dto.WithdrawInput) (struct{}
 
 	err = application.WithOptimisticRetry(uc.optimisticRetries, func() error {
 		return uc.transactor.RunInTransaction(ctx, func(ctx context.Context) error {
-			acc, err := uc.balanceRepo.FindByUserID(ctx, in.UserID)
+			acc, err := uc.balanceReader.FindByUserID(ctx, in.UserID)
 			if err != nil {
 				return err
 			}
@@ -70,11 +73,11 @@ func (uc *Withdraw) Execute(ctx context.Context, in dto.WithdrawInput) (struct{}
 
 			w := uc.withdrawalSvc.Create(in.UserID, orderNumber, vo.Points(in.Sum), now)
 
-			if err := uc.withdrawalRepo.Create(ctx, &w); err != nil {
+			if err := uc.withdrawalWriter.Create(ctx, &w); err != nil {
 				return err
 			}
 
-			return uc.balanceRepo.Update(ctx, acc)
+			return uc.balanceWriter.Update(ctx, acc)
 		})
 	})
 
