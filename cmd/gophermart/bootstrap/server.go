@@ -12,8 +12,6 @@ import (
 	"gophermart/internal/gophermart/application/port"
 )
 
-const serverShutdownTimeout = 5 * time.Second
-
 // StartServer starts the HTTP server in a goroutine.
 func StartServer(server *http.Server, log port.Logger) {
 	go func() {
@@ -26,13 +24,13 @@ func StartServer(server *http.Server, log port.Logger) {
 }
 
 // WaitForShutdown waits for SIGINT/SIGTERM and performs graceful shutdown.
-func WaitForShutdown(server *http.Server, log port.Logger) error {
+func WaitForShutdown(server *http.Server, shutdownTimeout time.Duration, log port.Logger) error {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
 	log.Info("shutdown signal received, stopping server...")
-	ctx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
