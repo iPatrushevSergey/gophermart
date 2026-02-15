@@ -7,9 +7,19 @@ import (
 	"gophermart/internal/gophermart/domain/vo"
 )
 
-// UserRepository persists users.
-type UserRepository interface {
-	Create(ctx context.Context, u *entity.User) error
+// UserReader provides read-only access to users.
+type UserReader interface {
 	FindByID(ctx context.Context, id vo.UserID) (*entity.User, error)
 	FindByLogin(ctx context.Context, login string) (*entity.User, error)
+}
+
+// UserWriter provides write access to users.
+type UserWriter interface {
+	Create(ctx context.Context, u *entity.User) error
+}
+
+// UserRepository combines reader and writer for DI wiring.
+type UserRepository interface {
+	UserReader
+	UserWriter
 }
