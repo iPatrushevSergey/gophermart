@@ -10,18 +10,18 @@ import (
 
 // ListWithdrawals returns all withdrawals for the given user.
 type ListWithdrawals struct {
-	withdrawalRepo port.WithdrawalRepository
+	withdrawalReader port.WithdrawalReader
 }
 
 // NewListWithdrawals returns the list withdrawals use case.
-func NewListWithdrawals(withdrawalRepo port.WithdrawalRepository) port.UseCase[vo.UserID, []dto.WithdrawalOutput] {
-	return &ListWithdrawals{withdrawalRepo: withdrawalRepo}
+func NewListWithdrawals(withdrawalReader port.WithdrawalReader) port.UseCase[vo.UserID, []dto.WithdrawalOutput] {
+	return &ListWithdrawals{withdrawalReader: withdrawalReader}
 }
 
 // Execute fetches withdrawals and maps them to output DTOs.
 // Returns an empty slice if the user has no withdrawals.
 func (uc *ListWithdrawals) Execute(ctx context.Context, userID vo.UserID) ([]dto.WithdrawalOutput, error) {
-	withdrawals, err := uc.withdrawalRepo.ListByUserID(ctx, userID)
+	withdrawals, err := uc.withdrawalReader.ListByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
