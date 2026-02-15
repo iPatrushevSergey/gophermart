@@ -13,18 +13,20 @@ import (
 
 // UploadOrder handles uploading a new order number for accrual calculation.
 type UploadOrder struct {
-	orderRepo port.OrderRepository
-	validator vo.OrderNumberValidator
-	orderSvc  service.OrderService
+	orderReader port.OrderReader
+	orderWriter port.OrderWriter
+	validator   vo.OrderNumberValidator
+	orderSvc    service.OrderService
 }
 
 // NewUploadOrder returns the upload order use case.
 func NewUploadOrder(
-	orderRepo port.OrderRepository,
+	orderReader port.OrderReader,
+	orderWriter port.OrderWriter,
 	validator vo.OrderNumberValidator,
 	orderSvc service.OrderService,
 ) port.UseCase[dto.UploadOrderInput, struct{}] {
-	return &UploadOrder{orderRepo: orderRepo, validator: validator, orderSvc: orderSvc}
+	return &UploadOrder{orderReader: orderReader, orderWriter: orderWriter, validator: validator, orderSvc: orderSvc}
 }
 
 // Execute validates the order number and creates it.
@@ -39,7 +41,7 @@ func (uc *UploadOrder) Execute(ctx context.Context, in dto.UploadOrderInput) (st
 		return struct{}{}, application.ErrInvalidOrderNumber
 	}
 
-	existing, err := uc.orderRepo.FindByNumber(ctx, orderNumber)
+	existing, err := uc.orderReader.FindByNumber(ctx, orderNumber)
 	if err != nil && err != application.ErrNotFound {
 		return struct{}{}, err
 	}
@@ -53,7 +55,7 @@ func (uc *UploadOrder) Execute(ctx context.Context, in dto.UploadOrderInput) (st
 
 	order := uc.orderSvc.CreateOrder(orderNumber, in.UserID, time.Now())
 
-	if err := uc.orderRepo.Create(ctx, order); err != nil {
+	if err := uc.orderWriter.Create(ctx, order); err != nil {
 		return struct{}{}, err
 	}
 
