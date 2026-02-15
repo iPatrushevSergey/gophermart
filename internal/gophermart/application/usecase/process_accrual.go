@@ -13,8 +13,10 @@ import (
 
 // ProcessAccrual fetches pending orders and synchronizes their status with the accrual system.
 type ProcessAccrual struct {
-	orderRepo         port.OrderRepository
-	balanceRepo       port.BalanceAccountRepository
+	orderReader       port.OrderReader
+	orderWriter       port.OrderWriter
+	balanceReader     port.BalanceAccountReader
+	balanceWriter     port.BalanceAccountWriter
 	accrualClient     port.AccrualClient
 	transactor        port.Transactor
 	log               port.Logger
@@ -24,8 +26,10 @@ type ProcessAccrual struct {
 
 // NewProcessAccrual returns the process accrual use case.
 func NewProcessAccrual(
-	orderRepo port.OrderRepository,
-	balanceRepo port.BalanceAccountRepository,
+	orderReader port.OrderReader,
+	orderWriter port.OrderWriter,
+	balanceReader port.BalanceAccountReader,
+	balanceWriter port.BalanceAccountWriter,
 	accrualClient port.AccrualClient,
 	transactor port.Transactor,
 	log port.Logger,
@@ -33,8 +37,10 @@ func NewProcessAccrual(
 	optimisticRetries int,
 ) *ProcessAccrual {
 	return &ProcessAccrual{
-		orderRepo:         orderRepo,
-		balanceRepo:       balanceRepo,
+		orderReader:       orderReader,
+		orderWriter:       orderWriter,
+		balanceReader:     balanceReader,
+		balanceWriter:     balanceWriter,
 		accrualClient:     accrualClient,
 		transactor:        transactor,
 		log:               log,
@@ -45,7 +51,7 @@ func NewProcessAccrual(
 
 // Run processes one batch of pending orders. Returns the number of processed orders.
 func (uc *ProcessAccrual) Run(ctx context.Context) (int, error) {
-	orders, err := uc.orderRepo.ListByStatuses(ctx, []entity.OrderStatus{
+	orders, err := uc.orderReader.ListByStatuses(ctx, []entity.OrderStatus{
 		entity.OrderStatusNew,
 		entity.OrderStatusProcessing,
 	}, uc.batchSize)
@@ -94,11 +100,11 @@ func (uc *ProcessAccrual) processOrder(ctx context.Context, order entity.Order) 
 	switch info.Status {
 	case "PROCESSING", "REGISTERED":
 		order.MarkProcessing()
-		return uc.orderRepo.Update(ctx, &order)
+		return uc.orderWriter.Update(ctx, &order)
 
 	case "INVALID":
 		order.MarkInvalid(now)
-		return uc.orderRepo.Update(ctx, &order)
+		return uc.orderWriter.Update(ctx, &order)
 
 	case "PROCESSED":
 		accrual := vo.Points(0)
@@ -109,7 +115,7 @@ func (uc *ProcessAccrual) processOrder(ctx context.Context, order entity.Order) 
 		return application.WithOptimisticRetry(uc.optimisticRetries, func() error {
 			return uc.transactor.RunInTransaction(ctx, func(ctx context.Context) error {
 				order.MarkProcessed(accrual, now)
-				if err := uc.orderRepo.Update(ctx, &order); err != nil {
+				if err := uc.orderWriter.Update(ctx, &order); err != nil {
 					return err
 				}
 
@@ -117,13 +123,13 @@ func (uc *ProcessAccrual) processOrder(ctx context.Context, order entity.Order) 
 					return nil
 				}
 
-				acc, err := uc.balanceRepo.FindByUserID(ctx, order.UserID)
+				acc, err := uc.balanceReader.FindByUserID(ctx, order.UserID)
 				if err != nil {
 					return err
 				}
 
 				acc.AddAccrual(accrual, now)
-				return uc.balanceRepo.Update(ctx, acc)
+				return uc.balanceWriter.Update(ctx, acc)
 			})
 		})
 	}
