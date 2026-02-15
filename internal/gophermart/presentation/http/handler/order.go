@@ -17,6 +17,9 @@ import (
 	"gophermart/internal/gophermart/presentation/http/httpcontext"
 )
 
+// maxOrderNumberBytes is a safety limit for order number body size.
+const maxOrderNumberBytes = 64
+
 // OrderHandler manages order-related requests.
 type OrderHandler struct {
 	factory factory.UseCaseFactory
@@ -36,7 +39,7 @@ func (h *OrderHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 64))
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, maxOrderNumberBytes))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to read body"})
 		return
