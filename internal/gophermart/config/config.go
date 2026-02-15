@@ -21,7 +21,8 @@ type Config struct {
 
 // ServerConfig holds HTTP server settings.
 type ServerConfig struct {
-	Address string
+	Address         string
+	ShutdownTimeout time.Duration
 }
 
 // DBConfig holds database connection pool settings.
@@ -43,7 +44,10 @@ type AuthConfig struct {
 
 // AccrualConfig holds accrual system settings.
 type AccrualConfig struct {
-	Address string
+	Address      string
+	PollInterval time.Duration
+	HTTPTimeout  time.Duration
+	BatchSize    int
 }
 
 // LogConfig holds logging settings.
@@ -53,9 +57,10 @@ type LogConfig struct {
 
 // RetryConfig holds retry settings for transient errors (DB, HTTP, etc.).
 type RetryConfig struct {
-	MaxRetries int
-	BaseDelay  time.Duration
-	MaxDelay   time.Duration
+	MaxRetries        int
+	BaseDelay         time.Duration
+	MaxDelay          time.Duration
+	OptimisticRetries int
 }
 
 type internalConfig struct {
@@ -113,7 +118,8 @@ func LoadConfig() (Config, error) {
 
 	return Config{
 		Server: ServerConfig{
-			Address: cfg.ServerAddress.String(),
+			Address:         cfg.ServerAddress.String(),
+			ShutdownTimeout: 5 * time.Second,
 		},
 		DB: DBConfig{
 			URI:         cfg.DatabaseURI,
@@ -129,15 +135,19 @@ func LoadConfig() (Config, error) {
 			BCryptCost: int(cfg.BCryptCost),
 		},
 		Accrual: AccrualConfig{
-			Address: cfg.AccrualAddress.URL(),
+			Address:      cfg.AccrualAddress.URL(),
+			PollInterval: 2 * time.Second,
+			HTTPTimeout:  10 * time.Second,
+			BatchSize:    50,
 		},
 		Log: LogConfig{
 			Level: cfg.LogLevel,
 		},
 		Retry: RetryConfig{
-			MaxRetries: 3,
-			BaseDelay:  100 * time.Millisecond,
-			MaxDelay:   2 * time.Second,
+			MaxRetries:        3,
+			BaseDelay:         100 * time.Millisecond,
+			MaxDelay:          2 * time.Second,
+			OptimisticRetries: 3,
 		},
 	}, nil
 }
