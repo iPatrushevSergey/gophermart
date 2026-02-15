@@ -10,4 +10,10 @@ import (
 type UseCaseFactory interface {
 	RegisterUseCase() port.UseCase[dto.RegisterInput, vo.UserID]
 	LoginUseCase() port.UseCase[dto.LoginInput, vo.UserID]
+	UploadOrderUseCase() port.UseCase[dto.UploadOrderInput, struct{}]
+	ListOrdersUseCase() port.UseCase[vo.UserID, []dto.OrderOutput]
+	GetBalanceUseCase() port.UseCase[vo.UserID, dto.BalanceOutput]
+	WithdrawUseCase() port.UseCase[dto.WithdrawInput, struct{}]
+	ListWithdrawalsUseCase() port.UseCase[vo.UserID, []dto.WithdrawalOutput]
+	ProcessAccrualUseCase() port.BackgroundRunner
 }
