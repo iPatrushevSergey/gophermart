@@ -1,13 +1,15 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"gophermart/internal/gophermart/adapters/logger"
+	"gophermart/internal/gophermart/adapters/repository/postgres"
 	"gophermart/internal/gophermart/config"
 )
 
-// Run loads config, initializes logger and app, starts server and waits for graceful shutdown.
+// Run loads config, initializes logger, DB, migrations, app, starts server and waits for graceful shutdown.
 func Run() error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -29,7 +31,35 @@ func Run() error {
 		"bcrypt_cost", cfg.Auth.BCryptCost,
 	)
 
-	app := NewApp(cfg, log)
+	// Database
+	ctx := context.Background()
+
+	pool, err := NewPool(ctx, cfg.DB)
+	if err != nil {
+		return fmt.Errorf("init database pool: %w", err)
+	}
+	defer pool.Close()
+
+	if cfg.DB.URI != "" {
+		if err := RunMigrations(cfg.DB.URI, "migrations/gophermart"); err != nil {
+			return fmt.Errorf("run migrations: %w", err)
+		}
+		log.Info("database migrations applied")
+	}
+
+	transactor := postgres.NewTransactor(pool, postgres.RetryConfig{
+		MaxRetries: cfg.Retry.MaxRetries,
+		BaseDelay:  cfg.Retry.BaseDelay,
+		MaxDelay:   cfg.Retry.MaxDelay,
+	})
+
+	app := NewApp(cfg, log, transactor)
+
+	// Start accrual background worker
+	workerCtx, workerCancel := context.WithCancel(ctx)
+	defer workerCancel()
+	app.AccrualWorker.Start(workerCtx)
+
 	StartServer(app.Server, log)
-	return WaitForShutdown(app.Server, log)
+	return WaitForShutdown(app.Server, cfg.Server.ShutdownTimeout, log)
 }
