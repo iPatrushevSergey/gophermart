@@ -7,8 +7,18 @@ import (
 	"gophermart/internal/gophermart/domain/vo"
 )
 
-// WithdrawalRepository persists withdrawal records.
-type WithdrawalRepository interface {
-	Create(ctx context.Context, w *entity.Withdrawal) error
+// WithdrawalReader provides read-only access to withdrawals.
+type WithdrawalReader interface {
 	ListByUserID(ctx context.Context, userID vo.UserID) ([]entity.Withdrawal, error)
+}
+
+// WithdrawalWriter provides write access to withdrawals.
+type WithdrawalWriter interface {
+	Create(ctx context.Context, w *entity.Withdrawal) error
+}
+
+// WithdrawalRepository combines reader and writer for DI wiring.
+type WithdrawalRepository interface {
+	WithdrawalReader
+	WithdrawalWriter
 }
