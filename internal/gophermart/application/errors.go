@@ -1,6 +1,10 @@
 package application
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"time"
+)
 
 var (
 	// ErrNotFound — resource not found.
@@ -24,3 +28,12 @@ var (
 	// ErrOptimisticLock — concurrent modification detected, operation should be retried.
 	ErrOptimisticLock = errors.New("optimistic lock conflict")
 )
+
+// ErrRateLimit — external system requested to slow down.
+type ErrRateLimit struct {
+	RetryAfter time.Duration
+}
+
+func (e *ErrRateLimit) Error() string {
+	return fmt.Sprintf("rate limited, retry after %s", e.RetryAfter)
+}
