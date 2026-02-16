@@ -42,10 +42,10 @@ internal/gophermart/
 │   ├── retry.go                     # WithOptimisticRetry helper
 │   ├── port/
 │   │   ├── usecase.go              # UseCase[In,Out], BackgroundRunner interfaces
-│   │   ├── user_repository.go      # UserRepository interface
-│   │   ├── order_repository.go     # OrderRepository interface
-│   │   ├── balance_repository.go   # BalanceAccountRepository interface
-│   │   ├── withdrawal_repository.go # WithdrawalRepository interface
+│   │   ├── user_repository.go      # UserReader, UserWriter, UserRepository
+│   │   ├── order_repository.go     # OrderReader, OrderWriter, OrderRepository
+│   │   ├── balance_repository.go   # BalanceAccountReader, Writer, Repository
+│   │   ├── withdrawal_repository.go # WithdrawalReader, Writer, Repository
 │   │   ├── transactor.go           # Transactor interface
 │   │   ├── accrual_client.go       # AccrualClient interface
 │   │   ├── token_provider.go       # TokenProvider interface
@@ -169,10 +169,10 @@ graph TD
     end
 
     subgraph ports ["Application Ports — application/port"]
-        UserRepo["UserRepository"]
-        OrderRepo["OrderRepository"]
-        BalanceRepo["BalanceAccountRepository"]
-        WithdrawalRepo["WithdrawalRepository"]
+        UserRepo["UserReader / UserWriter"]
+        OrderRepo["OrderReader / OrderWriter"]
+        BalanceRepo["BalanceAccountReader / Writer"]
+        WithdrawalRepo["WithdrawalReader / Writer"]
         AccrualClient["AccrualClient"]
         Transactor["Transactor"]
         BackgroundRunner["BackgroundRunner"]
