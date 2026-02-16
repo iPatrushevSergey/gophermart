@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"errors"
-	"time"
 
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/application/dto"
@@ -20,6 +19,7 @@ type Withdraw struct {
 	withdrawalWriter  port.WithdrawalWriter
 	transactor        port.Transactor
 	validator         vo.OrderNumberValidator
+	clock             port.Clock
 	withdrawalSvc     service.WithdrawalService
 	optimisticRetries int
 }
@@ -31,6 +31,7 @@ func NewWithdraw(
 	withdrawalWriter port.WithdrawalWriter,
 	transactor port.Transactor,
 	validator vo.OrderNumberValidator,
+	clock port.Clock,
 	withdrawalSvc service.WithdrawalService,
 	optimisticRetries int,
 ) port.UseCase[dto.WithdrawInput, struct{}] {
@@ -40,6 +41,7 @@ func NewWithdraw(
 		withdrawalWriter:  withdrawalWriter,
 		transactor:        transactor,
 		validator:         validator,
+		clock:             clock,
 		withdrawalSvc:     withdrawalSvc,
 		optimisticRetries: optimisticRetries,
 	}
@@ -65,7 +67,7 @@ func (uc *Withdraw) Execute(ctx context.Context, in dto.WithdrawInput) (struct{}
 				return err
 			}
 
-			now := time.Now()
+			now := uc.clock.Now()
 
 			if err := acc.Withdraw(vo.Points(in.Sum), now); err != nil {
 				return err
