@@ -32,6 +32,7 @@ func NewUseCaseFactory(
 	transactor port.Transactor,
 	validator vo.OrderNumberValidator,
 	accrualClient port.AccrualClient,
+	clock port.Clock,
 	userSvc service.UserService,
 	balanceSvc service.BalanceService,
 	orderSvc service.OrderService,
@@ -41,14 +42,14 @@ func NewUseCaseFactory(
 	optimisticRetries int,
 ) factory.UseCaseFactory {
 	return &useCaseFactory{
-		register:        usecase.NewRegisterUser(userRepo, userRepo, balanceRepo, transactor, hasher, userSvc, balanceSvc),
+		register:        usecase.NewRegisterUser(userRepo, userRepo, balanceRepo, transactor, hasher, clock, userSvc, balanceSvc),
 		login:           usecase.NewLoginUser(userRepo, hasher),
-		uploadOrder:     usecase.NewUploadOrder(orderRepo, orderRepo, validator, orderSvc),
+		uploadOrder:     usecase.NewUploadOrder(orderRepo, orderRepo, validator, clock, orderSvc),
 		listOrders:      usecase.NewListOrders(orderRepo),
 		getBalance:      usecase.NewGetBalance(balanceRepo),
-		withdraw:        usecase.NewWithdraw(balanceRepo, balanceRepo, withdrawalRepo, transactor, validator, withdrawalSvc, optimisticRetries),
+		withdraw:        usecase.NewWithdraw(balanceRepo, balanceRepo, withdrawalRepo, transactor, validator, clock, withdrawalSvc, optimisticRetries),
 		listWithdrawals: usecase.NewListWithdrawals(withdrawalRepo),
-		processAccrual:  usecase.NewProcessAccrual(orderRepo, orderRepo, balanceRepo, balanceRepo, accrualClient, transactor, log, batchSize, optimisticRetries),
+		processAccrual:  usecase.NewProcessAccrual(orderRepo, orderRepo, balanceRepo, balanceRepo, accrualClient, transactor, clock, log, batchSize, optimisticRetries),
 	}
 }
 
