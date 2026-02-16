@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"errors"
-	"time"
 
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/application/port"
@@ -19,6 +18,7 @@ type ProcessAccrual struct {
 	balanceWriter     port.BalanceAccountWriter
 	accrualClient     port.AccrualClient
 	transactor        port.Transactor
+	clock             port.Clock
 	log               port.Logger
 	batchSize         int
 	optimisticRetries int
@@ -32,6 +32,7 @@ func NewProcessAccrual(
 	balanceWriter port.BalanceAccountWriter,
 	accrualClient port.AccrualClient,
 	transactor port.Transactor,
+	clock port.Clock,
 	log port.Logger,
 	batchSize int,
 	optimisticRetries int,
@@ -43,6 +44,7 @@ func NewProcessAccrual(
 		balanceWriter:     balanceWriter,
 		accrualClient:     accrualClient,
 		transactor:        transactor,
+		clock:             clock,
 		log:               log,
 		batchSize:         batchSize,
 		optimisticRetries: optimisticRetries,
@@ -95,7 +97,7 @@ func (uc *ProcessAccrual) processOrder(ctx context.Context, order entity.Order) 
 		return nil
 	}
 
-	now := time.Now()
+	now := uc.clock.Now()
 
 	switch info.Status {
 	case "PROCESSING", "REGISTERED":
