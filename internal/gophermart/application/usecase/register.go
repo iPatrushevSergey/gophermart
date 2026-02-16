@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"time"
 
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/application/dto"
@@ -18,6 +17,7 @@ type RegisterUser struct {
 	balanceWriter port.BalanceAccountWriter
 	transactor    port.Transactor
 	hasher        port.PasswordHasher
+	clock         port.Clock
 	userSvc       service.UserService
 	balanceSvc    service.BalanceService
 }
@@ -29,6 +29,7 @@ func NewRegisterUser(
 	balanceWriter port.BalanceAccountWriter,
 	transactor port.Transactor,
 	hasher port.PasswordHasher,
+	clock port.Clock,
 	userSvc service.UserService,
 	balanceSvc service.BalanceService,
 ) port.UseCase[dto.RegisterInput, vo.UserID] {
@@ -38,6 +39,7 @@ func NewRegisterUser(
 		balanceWriter: balanceWriter,
 		transactor:    transactor,
 		hasher:        hasher,
+		clock:         clock,
 		userSvc:       userSvc,
 		balanceSvc:    balanceSvc,
 	}
@@ -61,7 +63,7 @@ func (uc *RegisterUser) Execute(ctx context.Context, in dto.RegisterInput) (vo.U
 		return 0, err
 	}
 
-	now := time.Now()
+	now := uc.clock.Now()
 	u := uc.userSvc.CreateUser(in.Login, hash, now)
 
 	err = uc.transactor.RunInTransaction(ctx, func(ctx context.Context) error {
