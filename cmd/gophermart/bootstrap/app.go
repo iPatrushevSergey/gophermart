@@ -5,6 +5,7 @@ import (
 
 	"gophermart/internal/gophermart/adapters/accrual"
 	"gophermart/internal/gophermart/adapters/auth"
+	adapterclock "gophermart/internal/gophermart/adapters/clock"
 	"gophermart/internal/gophermart/adapters/repository/postgres"
 	"gophermart/internal/gophermart/adapters/validation"
 	"gophermart/internal/gophermart/application/port"
@@ -40,9 +41,11 @@ func NewApp(cfg config.Config, log port.Logger, transactor *postgres.Transactor)
 	orderSvc := service.OrderService{}
 	withdrawalSvc := service.WithdrawalService{}
 
+	clk := adapterclock.Real{}
+
 	ucFactory := NewUseCaseFactory(
 		userRepo, orderRepo, balanceRepo, withdrawalRepo,
-		hasher, tokens, transactor, luhnValidator, accrualClient,
+		hasher, tokens, transactor, luhnValidator, accrualClient, clk,
 		userSvc, balanceSvc, orderSvc, withdrawalSvc, log,
 		cfg.Accrual.BatchSize, cfg.Retry.OptimisticRetries,
 	)
