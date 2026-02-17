@@ -66,7 +66,9 @@ func TestUserHandler_Register_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Header().Get("Authorization"), "Bearer test-jwt-token")
 
-	cookies := w.Result().Cookies()
+	result := w.Result()
+	defer result.Body.Close()
+	cookies := result.Cookies()
 	require.NotEmpty(t, cookies)
 	var found bool
 	for _, c := range cookies {
