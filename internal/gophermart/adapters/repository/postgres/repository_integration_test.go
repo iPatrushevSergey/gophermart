@@ -17,12 +17,10 @@ import (
 	"gophermart/internal/gophermart/testutil"
 )
 
-var noRetry = postgres.RetryConfig{MaxRetries: 0}
-
 func setupTransactor(t *testing.T) *postgres.Transactor {
 	t.Helper()
 	pool := testutil.SetupPostgres(t)
-	return postgres.NewTransactor(pool, noRetry)
+	return postgres.NewTransactor(pool, postgres.WithMaxRetries(0))
 }
 
 // createTestUser inserts a user and returns it with ID populated.
