@@ -19,7 +19,7 @@ func NewWithdrawalRepository(transactor *Transactor) *WithdrawalRepository {
 
 // Create inserts a new withdrawal record.
 func (r *WithdrawalRepository) Create(ctx context.Context, w *entity.Withdrawal) error {
-	return DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	return r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		_, err := q.Exec(ctx, `
@@ -35,7 +35,7 @@ func (r *WithdrawalRepository) Create(ctx context.Context, w *entity.Withdrawal)
 func (r *WithdrawalRepository) ListByUserID(ctx context.Context, userID vo.UserID) ([]entity.Withdrawal, error) {
 	var result []entity.Withdrawal
 
-	err := DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	err := r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		rows, err := q.Query(ctx, `
