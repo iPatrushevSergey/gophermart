@@ -10,7 +10,6 @@ import (
 	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port/mocks"
 	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/service"
 	"gophermart/internal/gophermart/domain/vo"
 	voMocks "gophermart/internal/gophermart/domain/vo/mocks"
 
@@ -40,7 +39,7 @@ func TestUploadOrder_Execute(t *testing.T) {
 			},
 		)
 
-		uc := NewUploadOrder(orderReader, orderWriter, validator, clk, service.OrderService{})
+		uc := NewUploadOrder(orderReader, orderWriter, validator, clk)
 		_, err := uc.Execute(ctx, dto.UploadOrderInput{UserID: 1, OrderNumber: "12345678903"})
 
 		assert.NoError(t, err)
@@ -57,7 +56,7 @@ func TestUploadOrder_Execute(t *testing.T) {
 			&entity.Order{UserID: vo.UserID(1)}, nil,
 		)
 
-		uc := NewUploadOrder(orderReader, nil, validator, nil, service.OrderService{})
+		uc := NewUploadOrder(orderReader, nil, validator, nil)
 		_, err := uc.Execute(ctx, dto.UploadOrderInput{UserID: 1, OrderNumber: "12345678903"})
 
 		assert.ErrorIs(t, err, application.ErrAlreadyExists)
@@ -74,7 +73,7 @@ func TestUploadOrder_Execute(t *testing.T) {
 			&entity.Order{UserID: vo.UserID(2)}, nil,
 		)
 
-		uc := NewUploadOrder(orderReader, nil, validator, nil, service.OrderService{})
+		uc := NewUploadOrder(orderReader, nil, validator, nil)
 		_, err := uc.Execute(ctx, dto.UploadOrderInput{UserID: 1, OrderNumber: "12345678903"})
 
 		assert.ErrorIs(t, err, application.ErrConflict)
@@ -86,7 +85,7 @@ func TestUploadOrder_Execute(t *testing.T) {
 		validator := voMocks.NewMockOrderNumberValidator(ctrl)
 		validator.EXPECT().Valid("123").Return(false)
 
-		uc := NewUploadOrder(nil, nil, validator, nil, service.OrderService{})
+		uc := NewUploadOrder(nil, nil, validator, nil)
 		_, err := uc.Execute(ctx, dto.UploadOrderInput{UserID: 1, OrderNumber: "123"})
 
 		assert.ErrorIs(t, err, application.ErrInvalidOrderNumber)
@@ -101,7 +100,7 @@ func TestUploadOrder_Execute(t *testing.T) {
 		validator.EXPECT().Valid("12345678903").Return(true)
 		orderReader.EXPECT().FindByNumber(ctx, vo.OrderNumber("12345678903")).Return(nil, errors.New("db error"))
 
-		uc := NewUploadOrder(orderReader, nil, validator, nil, service.OrderService{})
+		uc := NewUploadOrder(orderReader, nil, validator, nil)
 		_, err := uc.Execute(ctx, dto.UploadOrderInput{UserID: 1, OrderNumber: "12345678903"})
 
 		assert.Error(t, err)
