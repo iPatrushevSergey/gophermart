@@ -6,6 +6,7 @@ import (
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/domain/entity"
 	"gophermart/internal/gophermart/domain/service"
 	"gophermart/internal/gophermart/domain/vo"
 )
@@ -18,7 +19,6 @@ type RegisterUser struct {
 	transactor    port.Transactor
 	hasher        port.PasswordHasher
 	clock         port.Clock
-	userSvc       service.UserService
 	balanceSvc    service.BalanceService
 }
 
@@ -30,7 +30,6 @@ func NewRegisterUser(
 	transactor port.Transactor,
 	hasher port.PasswordHasher,
 	clock port.Clock,
-	userSvc service.UserService,
 	balanceSvc service.BalanceService,
 ) port.UseCase[dto.RegisterInput, vo.UserID] {
 	return &RegisterUser{
@@ -40,7 +39,6 @@ func NewRegisterUser(
 		transactor:    transactor,
 		hasher:        hasher,
 		clock:         clock,
-		userSvc:       userSvc,
 		balanceSvc:    balanceSvc,
 	}
 }
@@ -64,7 +62,7 @@ func (uc *RegisterUser) Execute(ctx context.Context, in dto.RegisterInput) (vo.U
 	}
 
 	now := uc.clock.Now()
-	u := uc.userSvc.CreateUser(in.Login, hash, now)
+	u := entity.NewUser(in.Login, hash, now)
 
 	err = uc.transactor.RunInTransaction(ctx, func(ctx context.Context) error {
 		if err := uc.userWriter.Create(ctx, u); err != nil {
