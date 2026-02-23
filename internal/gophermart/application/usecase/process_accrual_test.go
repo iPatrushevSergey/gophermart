@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"iter"
 	"testing"
 	"time"
 
@@ -18,6 +19,17 @@ import (
 
 var fixedTime = time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 
+// ordersIter builds an iter.Seq2 from a slice — handy for mocking StreamByStatuses.
+func ordersIter(orders ...entity.Order) iter.Seq2[entity.Order, error] {
+	return func(yield func(entity.Order, error) bool) {
+		for _, o := range orders {
+			if !yield(o, nil) {
+				return
+			}
+		}
+	}
+}
+
 func newTestProcessAccrual(
 	ctrl *gomock.Controller,
 ) (*mocks.MockOrderReader, *mocks.MockOrderWriter, *mocks.MockBalanceAccountReader, *mocks.MockBalanceAccountWriter, *mocks.MockAccrualClient, *mocks.MockTransactor, *mocks.MockClock, *mocks.MockLogger, *ProcessAccrual) {
@@ -30,20 +42,18 @@ func newTestProcessAccrual(
 	clk := mocks.NewMockClock(ctrl)
 	logger := mocks.NewMockLogger(ctrl)
 
-	uc := NewProcessAccrual(orderReader, orderWriter, balanceReader, balanceWriter, accrualClient, transactor, clk, logger, 50, 3)
+	uc := NewProcessAccrual(orderReader, orderWriter, balanceReader, balanceWriter, accrualClient, transactor, clk, logger, 50, 5, 3)
 	return orderReader, orderWriter, balanceReader, balanceWriter, accrualClient, transactor, clk, logger, uc
 }
 
 func TestProcessAccrual_Run(t *testing.T) {
-	ctx := context.Background()
-
 	t.Run("empty batch", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		orderReader, _, _, _, _, _, _, _, uc := newTestProcessAccrual(ctrl)
 
-		orderReader.EXPECT().ListByStatuses(ctx, gomock.Any(), 50).Return(nil, nil)
+		orderReader.EXPECT().StreamByStatuses(gomock.Any(), gomock.Any(), 50).Return(ordersIter())
 
-		processed, err := uc.Run(ctx)
+		processed, err := uc.Run(context.Background())
 
 		assert.NoError(t, err)
 		assert.Equal(t, 0, processed)
@@ -56,23 +66,23 @@ func TestProcessAccrual_Run(t *testing.T) {
 		accrual := float64(700)
 		order := entity.Order{Number: "12345678903", UserID: 1, Status: entity.OrderStatusNew}
 
-		orderReader.EXPECT().ListByStatuses(ctx, gomock.Any(), 50).Return([]entity.Order{order}, nil)
-		accrualClient.EXPECT().GetOrderAccrual(ctx, "12345678903").Return(&appdto.AccrualOrderInfo{
+		orderReader.EXPECT().StreamByStatuses(gomock.Any(), gomock.Any(), 50).Return(ordersIter(order))
+		accrualClient.EXPECT().GetOrderAccrual(gomock.Any(), "12345678903").Return(&appdto.AccrualOrderInfo{
 			Status: "PROCESSED", Accrual: &accrual,
 		}, nil)
 		clk.EXPECT().Now().Return(fixedTime)
-		transactor.EXPECT().RunInTransaction(ctx, gomock.Any()).DoAndReturn(
+		transactor.EXPECT().RunInTransaction(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
 				return fn(ctx)
 			},
 		)
-		orderWriter.EXPECT().Update(ctx, gomock.Any()).Return(nil)
-		balanceReader.EXPECT().FindByUserID(ctx, vo.UserID(1)).Return(&entity.BalanceAccount{
+		orderWriter.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+		balanceReader.EXPECT().FindByUserID(gomock.Any(), vo.UserID(1)).Return(&entity.BalanceAccount{
 			Current: vo.Points(0),
 		}, nil)
-		balanceWriter.EXPECT().Update(ctx, gomock.Any()).Return(nil)
+		balanceWriter.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 
-		processed, err := uc.Run(ctx)
+		processed, err := uc.Run(context.Background())
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, processed)
@@ -84,14 +94,14 @@ func TestProcessAccrual_Run(t *testing.T) {
 
 		order := entity.Order{Number: "12345678903", Status: entity.OrderStatusNew}
 
-		orderReader.EXPECT().ListByStatuses(ctx, gomock.Any(), 50).Return([]entity.Order{order}, nil)
-		accrualClient.EXPECT().GetOrderAccrual(ctx, "12345678903").Return(&appdto.AccrualOrderInfo{
+		orderReader.EXPECT().StreamByStatuses(gomock.Any(), gomock.Any(), 50).Return(ordersIter(order))
+		accrualClient.EXPECT().GetOrderAccrual(gomock.Any(), "12345678903").Return(&appdto.AccrualOrderInfo{
 			Status: "INVALID",
 		}, nil)
 		clk.EXPECT().Now().Return(fixedTime)
-		orderWriter.EXPECT().Update(ctx, gomock.Any()).Return(nil)
+		orderWriter.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 
-		processed, err := uc.Run(ctx)
+		processed, err := uc.Run(context.Background())
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, processed)
@@ -103,14 +113,14 @@ func TestProcessAccrual_Run(t *testing.T) {
 
 		order := entity.Order{Number: "12345678903", Status: entity.OrderStatusNew}
 
-		orderReader.EXPECT().ListByStatuses(ctx, gomock.Any(), 50).Return([]entity.Order{order}, nil)
-		accrualClient.EXPECT().GetOrderAccrual(ctx, "12345678903").Return(&appdto.AccrualOrderInfo{
+		orderReader.EXPECT().StreamByStatuses(gomock.Any(), gomock.Any(), 50).Return(ordersIter(order))
+		accrualClient.EXPECT().GetOrderAccrual(gomock.Any(), "12345678903").Return(&appdto.AccrualOrderInfo{
 			Status: "PROCESSING",
 		}, nil)
 		clk.EXPECT().Now().Return(fixedTime)
-		orderWriter.EXPECT().Update(ctx, gomock.Any()).Return(nil)
+		orderWriter.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 
-		processed, err := uc.Run(ctx)
+		processed, err := uc.Run(context.Background())
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, processed)
@@ -122,10 +132,10 @@ func TestProcessAccrual_Run(t *testing.T) {
 
 		order := entity.Order{Number: "12345678903", Status: entity.OrderStatusNew}
 
-		orderReader.EXPECT().ListByStatuses(ctx, gomock.Any(), 50).Return([]entity.Order{order}, nil)
-		accrualClient.EXPECT().GetOrderAccrual(ctx, "12345678903").Return(nil, nil)
+		orderReader.EXPECT().StreamByStatuses(gomock.Any(), gomock.Any(), 50).Return(ordersIter(order))
+		accrualClient.EXPECT().GetOrderAccrual(gomock.Any(), "12345678903").Return(nil, nil)
 
-		processed, err := uc.Run(ctx)
+		processed, err := uc.Run(context.Background())
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, processed)
@@ -138,10 +148,10 @@ func TestProcessAccrual_Run(t *testing.T) {
 		order := entity.Order{Number: "12345678903", Status: entity.OrderStatusNew}
 		rlErr := &application.ErrRateLimit{RetryAfter: 60 * time.Second}
 
-		orderReader.EXPECT().ListByStatuses(ctx, gomock.Any(), 50).Return([]entity.Order{order}, nil)
-		accrualClient.EXPECT().GetOrderAccrual(ctx, "12345678903").Return(nil, rlErr)
+		orderReader.EXPECT().StreamByStatuses(gomock.Any(), gomock.Any(), 50).Return(ordersIter(order))
+		accrualClient.EXPECT().GetOrderAccrual(gomock.Any(), "12345678903").Return(nil, rlErr)
 
-		processed, err := uc.Run(ctx)
+		processed, err := uc.Run(context.Background())
 
 		assert.ErrorAs(t, err, &rlErr)
 		assert.Equal(t, 0, processed)
@@ -153,11 +163,11 @@ func TestProcessAccrual_Run(t *testing.T) {
 
 		order := entity.Order{Number: "12345678903", Status: entity.OrderStatusNew}
 
-		orderReader.EXPECT().ListByStatuses(ctx, gomock.Any(), 50).Return([]entity.Order{order}, nil)
-		accrualClient.EXPECT().GetOrderAccrual(ctx, "12345678903").Return(nil, errors.New("timeout"))
+		orderReader.EXPECT().StreamByStatuses(gomock.Any(), gomock.Any(), 50).Return(ordersIter(order))
+		accrualClient.EXPECT().GetOrderAccrual(gomock.Any(), "12345678903").Return(nil, errors.New("timeout"))
 		logger.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
 
-		processed, err := uc.Run(ctx)
+		processed, err := uc.Run(context.Background())
 
 		assert.NoError(t, err)
 		assert.Equal(t, 0, processed)
