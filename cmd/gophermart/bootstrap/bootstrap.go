@@ -47,11 +47,10 @@ func Run() error {
 		log.Info("database migrations applied")
 	}
 
-	transactor := postgres.NewTransactor(pool, postgres.RetryConfig{
-		MaxRetries: cfg.Retry.MaxRetries,
-		BaseDelay:  cfg.Retry.BaseDelay,
-		MaxDelay:   cfg.Retry.MaxDelay,
-	})
+	transactor := postgres.NewTransactor(pool,
+		postgres.WithMaxRetries(cfg.Retry.MaxRetries),
+		postgres.WithExponentialBackoff(cfg.Retry.BaseDelay, cfg.Retry.MaxDelay),
+	)
 
 	app := NewApp(cfg, log, transactor)
 
