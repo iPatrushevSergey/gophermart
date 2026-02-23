@@ -8,7 +8,6 @@ import (
 	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
 	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/service"
 	"gophermart/internal/gophermart/domain/vo"
 )
 
@@ -20,7 +19,6 @@ type Withdraw struct {
 	transactor        port.Transactor
 	validator         vo.OrderNumberValidator
 	clock             port.Clock
-	withdrawalSvc     service.WithdrawalService
 	optimisticRetries int
 }
 
@@ -32,7 +30,6 @@ func NewWithdraw(
 	transactor port.Transactor,
 	validator vo.OrderNumberValidator,
 	clock port.Clock,
-	withdrawalSvc service.WithdrawalService,
 	optimisticRetries int,
 ) port.UseCase[dto.WithdrawInput, struct{}] {
 	return &Withdraw{
@@ -42,7 +39,6 @@ func NewWithdraw(
 		transactor:        transactor,
 		validator:         validator,
 		clock:             clock,
-		withdrawalSvc:     withdrawalSvc,
 		optimisticRetries: optimisticRetries,
 	}
 }
@@ -73,9 +69,9 @@ func (uc *Withdraw) Execute(ctx context.Context, in dto.WithdrawInput) (struct{}
 				return err
 			}
 
-			w := uc.withdrawalSvc.Create(in.UserID, orderNumber, vo.Points(in.Sum), now)
+			w := entity.NewWithdrawal(in.UserID, orderNumber, vo.Points(in.Sum), now)
 
-			if err := uc.withdrawalWriter.Create(ctx, &w); err != nil {
+			if err := uc.withdrawalWriter.Create(ctx, w); err != nil {
 				return err
 			}
 
