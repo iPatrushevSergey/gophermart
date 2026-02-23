@@ -26,6 +26,16 @@ type Order struct {
 	ProcessedAt *time.Time
 }
 
+// NewOrder creates a new Order entity with NEW status.
+func NewOrder(number vo.OrderNumber, userID vo.UserID, now time.Time) *Order {
+	return &Order{
+		Number:     number,
+		UserID:     userID,
+		Status:     OrderStatusNew,
+		UploadedAt: now,
+	}
+}
+
 // MarkProcessed transfers the order to the PROCESSED status and records the charge and time.
 func (o *Order) MarkProcessed(accrual vo.Points, now time.Time) {
 	o.Status = OrderStatusProcessed
