@@ -48,6 +48,7 @@ type AccrualConfig struct {
 	PollInterval time.Duration
 	HTTPTimeout  time.Duration
 	BatchSize    int
+	MaxWorkers   int
 }
 
 // LogConfig holds logging settings.
@@ -139,6 +140,7 @@ func LoadConfig() (Config, error) {
 			PollInterval: 2 * time.Second,
 			HTTPTimeout:  10 * time.Second,
 			BatchSize:    50,
+			MaxWorkers:   5,
 		},
 		Log: LogConfig{
 			Level: cfg.LogLevel,
