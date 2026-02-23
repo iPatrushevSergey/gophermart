@@ -56,10 +56,7 @@ func setupE2EServer(t *testing.T) *httptest.Server {
 	balanceRepo := postgres.NewBalanceAccountRepository(transactor)
 	withdrawalRepo := postgres.NewWithdrawalRepository(transactor)
 
-	userSvc := service.UserService{}
 	balanceSvc := service.BalanceService{}
-	orderSvc := service.OrderService{}
-	withdrawalSvc := service.WithdrawalService{}
 
 	ctrl := gomock.NewController(t)
 	log := portmocks.NewMockLogger(ctrl)
@@ -69,10 +66,18 @@ func setupE2EServer(t *testing.T) *httptest.Server {
 	log.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
 
 	ucFactory := bootstrap.NewUseCaseFactory(
-		userRepo, orderRepo, balanceRepo, withdrawalRepo,
-		hasher, tokens, transactor, luhnValidator, accrualClient, clk,
-		userSvc, balanceSvc, orderSvc, withdrawalSvc, log,
-		50, 3,
+		bootstrap.WithUserRepo(userRepo),
+		bootstrap.WithOrderRepo(orderRepo),
+		bootstrap.WithBalanceRepo(balanceRepo),
+		bootstrap.WithWithdrawalRepo(withdrawalRepo),
+		bootstrap.WithHasher(hasher),
+		bootstrap.WithTokens(tokens),
+		bootstrap.WithTransactor(transactor),
+		bootstrap.WithValidator(luhnValidator),
+		bootstrap.WithAccrualClient(accrualClient),
+		bootstrap.WithClock(clk),
+		bootstrap.WithBalanceSvc(balanceSvc),
+		bootstrap.WithLogger(log),
 	)
 
 	userHandler := handler.NewUserHandler(ucFactory, tokens, log)
