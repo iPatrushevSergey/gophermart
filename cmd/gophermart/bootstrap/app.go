@@ -35,19 +35,25 @@ func NewApp(cfg config.Config, log port.Logger, transactor *postgres.Transactor)
 	balanceRepo := postgres.NewBalanceAccountRepository(transactor)
 	withdrawalRepo := postgres.NewWithdrawalRepository(transactor)
 
-	// Domain services
-	userSvc := service.UserService{}
 	balanceSvc := service.BalanceService{}
-	orderSvc := service.OrderService{}
-	withdrawalSvc := service.WithdrawalService{}
-
 	clk := adapterclock.Real{}
 
 	ucFactory := NewUseCaseFactory(
-		userRepo, orderRepo, balanceRepo, withdrawalRepo,
-		hasher, tokens, transactor, luhnValidator, accrualClient, clk,
-		userSvc, balanceSvc, orderSvc, withdrawalSvc, log,
-		cfg.Accrual.BatchSize, cfg.Retry.OptimisticRetries,
+		WithUserRepo(userRepo),
+		WithOrderRepo(orderRepo),
+		WithBalanceRepo(balanceRepo),
+		WithWithdrawalRepo(withdrawalRepo),
+		WithHasher(hasher),
+		WithTokens(tokens),
+		WithTransactor(transactor),
+		WithValidator(luhnValidator),
+		WithAccrualClient(accrualClient),
+		WithClock(clk),
+		WithBalanceSvc(balanceSvc),
+		WithLogger(log),
+		WithBatchSize(cfg.Accrual.BatchSize),
+		WithMaxWorkers(cfg.Accrual.MaxWorkers),
+		WithOptimisticRetries(cfg.Retry.OptimisticRetries),
 	)
 
 	userHandler := handler.NewUserHandler(ucFactory, tokens, log)
