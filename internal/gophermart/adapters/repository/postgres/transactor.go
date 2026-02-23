@@ -12,13 +12,13 @@ type txKey struct{}
 
 // Transactor manages database transactions via pgxpool with retry support.
 type Transactor struct {
-	pool  *pgxpool.Pool
-	retry RetryConfig
+	pool      *pgxpool.Pool
+	retryOpts []RetryOption
 }
 
 // NewTransactor creates a new Transactor.
-func NewTransactor(pool *pgxpool.Pool, retry RetryConfig) *Transactor {
-	return &Transactor{pool: pool, retry: retry}
+func NewTransactor(pool *pgxpool.Pool, opts ...RetryOption) *Transactor {
+	return &Transactor{pool: pool, retryOpts: opts}
 }
 
 // RunInTransaction executes the given function within a transaction.
@@ -29,9 +29,9 @@ func (t *Transactor) RunInTransaction(ctx context.Context, fn func(ctx context.C
 		return fn(ctx)
 	}
 
-	return DoWithRetry(ctx, t.retry, func() error {
+	return DoWithRetry(ctx, func() error {
 		return t.runTx(ctx, fn)
-	})
+	}, t.retryOpts...)
 }
 
 func (t *Transactor) runTx(ctx context.Context, fn func(ctx context.Context) error) error {
@@ -65,7 +65,7 @@ func (t *Transactor) GetQuerier(ctx context.Context) Querier {
 	return t.pool
 }
 
-// RetryConfig returns the retry configuration for use by repositories.
-func (t *Transactor) RetryConfig() RetryConfig {
-	return t.retry
+// DoWithRetry executes the operation with the transactor's retry options.
+func (t *Transactor) DoWithRetry(ctx context.Context, op func() error) error {
+	return DoWithRetry(ctx, op, t.retryOpts...)
 }
