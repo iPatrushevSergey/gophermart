@@ -23,7 +23,7 @@ func NewBalanceAccountRepository(transactor *Transactor) *BalanceAccountReposito
 
 // Create inserts a new balance account.
 func (r *BalanceAccountRepository) Create(ctx context.Context, acc *entity.BalanceAccount) error {
-	return DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	return r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		_, err := q.Exec(ctx, `
@@ -39,7 +39,7 @@ func (r *BalanceAccountRepository) Create(ctx context.Context, acc *entity.Balan
 func (r *BalanceAccountRepository) FindByUserID(ctx context.Context, userID vo.UserID) (*entity.BalanceAccount, error) {
 	var acc entity.BalanceAccount
 
-	err := DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	err := r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		return q.QueryRow(ctx, `
@@ -69,7 +69,7 @@ func (r *BalanceAccountRepository) FindByUserID(ctx context.Context, userID vo.U
 // Update updates the balance account with optimistic locking.
 // Returns application.ErrOptimisticLock if the version in DB does not match acc.Version.
 func (r *BalanceAccountRepository) Update(ctx context.Context, acc *entity.BalanceAccount) error {
-	return DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	return r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		var newVersion int64
