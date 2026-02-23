@@ -36,11 +36,10 @@ func setupE2EServer(t *testing.T) *httptest.Server {
 
 	pool := testutil.SetupPostgres(t)
 
-	transactor := postgres.NewTransactor(pool, postgres.RetryConfig{
-		MaxRetries: 1,
-		BaseDelay:  50 * time.Millisecond,
-		MaxDelay:   200 * time.Millisecond,
-	})
+	transactor := postgres.NewTransactor(pool,
+		postgres.WithMaxRetries(1),
+		postgres.WithExponentialBackoff(50*time.Millisecond, 200*time.Millisecond),
+	)
 
 	hasher := auth.NewBCryptHasher(4) // low cost for fast tests
 	tokens := auth.NewJWTProvider("test-secret", 1*time.Hour)
