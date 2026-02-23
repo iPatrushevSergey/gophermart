@@ -10,7 +10,6 @@ import (
 	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port/mocks"
 	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/service"
 	"gophermart/internal/gophermart/domain/vo"
 	voMocks "gophermart/internal/gophermart/domain/vo/mocks"
 
@@ -45,7 +44,7 @@ func TestWithdraw_Execute(t *testing.T) {
 		withdrawalWriter.EXPECT().Create(ctx, gomock.Any()).Return(nil)
 		balanceWriter.EXPECT().Update(ctx, gomock.Any()).Return(nil)
 
-		uc := NewWithdraw(balanceReader, balanceWriter, withdrawalWriter, transactor, validator, clk, service.WithdrawalService{}, 3)
+		uc := NewWithdraw(balanceReader, balanceWriter, withdrawalWriter, transactor, validator, clk, 3)
 		_, err := uc.Execute(ctx, dto.WithdrawInput{UserID: 1, OrderNumber: "2377225624", Sum: 200})
 
 		assert.NoError(t, err)
@@ -57,7 +56,7 @@ func TestWithdraw_Execute(t *testing.T) {
 
 		validator.EXPECT().Valid("123").Return(false)
 
-		uc := NewWithdraw(nil, nil, nil, nil, validator, nil, service.WithdrawalService{}, 3)
+		uc := NewWithdraw(nil, nil, nil, nil, validator, nil, 3)
 		_, err := uc.Execute(ctx, dto.WithdrawInput{UserID: 1, OrderNumber: "123", Sum: 100})
 
 		assert.ErrorIs(t, err, application.ErrInvalidOrderNumber)
@@ -82,7 +81,7 @@ func TestWithdraw_Execute(t *testing.T) {
 		}, nil)
 		clk.EXPECT().Now().Return(fixedTime)
 
-		uc := NewWithdraw(balanceReader, nil, nil, transactor, validator, clk, service.WithdrawalService{}, 3)
+		uc := NewWithdraw(balanceReader, nil, nil, transactor, validator, clk, 3)
 		_, err := uc.Execute(ctx, dto.WithdrawInput{UserID: 1, OrderNumber: "2377225624", Sum: 200})
 
 		assert.ErrorIs(t, err, application.ErrInsufficientBalance)
@@ -103,7 +102,7 @@ func TestWithdraw_Execute(t *testing.T) {
 		)
 		balanceReader.EXPECT().FindByUserID(ctx, vo.UserID(1)).Return(nil, errors.New("db error"))
 
-		uc := NewWithdraw(balanceReader, nil, nil, transactor, validator, nil, service.WithdrawalService{}, 3)
+		uc := NewWithdraw(balanceReader, nil, nil, transactor, validator, nil, 3)
 		_, err := uc.Execute(ctx, dto.WithdrawInput{UserID: 1, OrderNumber: "2377225624", Sum: 200})
 
 		assert.Error(t, err)
