@@ -13,3 +13,13 @@ type Withdrawal struct {
 	Amount      vo.Points
 	ProcessedAt time.Time
 }
+
+// NewWithdrawal creates a new Withdrawal entity.
+func NewWithdrawal(userID vo.UserID, orderNumber vo.OrderNumber, amount vo.Points, at time.Time) *Withdrawal {
+	return &Withdrawal{
+		UserID:      userID,
+		OrderNumber: orderNumber,
+		Amount:      amount,
+		ProcessedAt: at,
+	}
+}
