@@ -13,6 +13,7 @@ import (
 	context "context"
 	entity "gophermart/internal/gophermart/domain/entity"
 	vo "gophermart/internal/gophermart/domain/vo"
+	iter "iter"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -85,6 +86,20 @@ func (m *MockOrderReader) ListByUserID(ctx context.Context, userID vo.UserID) ([
 func (mr *MockOrderReaderMockRecorder) ListByUserID(ctx, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUserID", reflect.TypeOf((*MockOrderReader)(nil).ListByUserID), ctx, userID)
+}
+
+// StreamByStatuses mocks base method.
+func (m *MockOrderReader) StreamByStatuses(ctx context.Context, statuses []entity.OrderStatus, limit int) iter.Seq2[entity.Order, error] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamByStatuses", ctx, statuses, limit)
+	ret0, _ := ret[0].(iter.Seq2[entity.Order, error])
+	return ret0
+}
+
+// StreamByStatuses indicates an expected call of StreamByStatuses.
+func (mr *MockOrderReaderMockRecorder) StreamByStatuses(ctx, statuses, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamByStatuses", reflect.TypeOf((*MockOrderReader)(nil).StreamByStatuses), ctx, statuses, limit)
 }
 
 // MockOrderWriter is a mock of OrderWriter interface.
@@ -220,6 +235,20 @@ func (m *MockOrderRepository) ListByUserID(ctx context.Context, userID vo.UserID
 func (mr *MockOrderRepositoryMockRecorder) ListByUserID(ctx, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUserID", reflect.TypeOf((*MockOrderRepository)(nil).ListByUserID), ctx, userID)
+}
+
+// StreamByStatuses mocks base method.
+func (m *MockOrderRepository) StreamByStatuses(ctx context.Context, statuses []entity.OrderStatus, limit int) iter.Seq2[entity.Order, error] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamByStatuses", ctx, statuses, limit)
+	ret0, _ := ret[0].(iter.Seq2[entity.Order, error])
+	return ret0
+}
+
+// StreamByStatuses indicates an expected call of StreamByStatuses.
+func (mr *MockOrderRepositoryMockRecorder) StreamByStatuses(ctx, statuses, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamByStatuses", reflect.TypeOf((*MockOrderRepository)(nil).StreamByStatuses), ctx, statuses, limit)
 }
 
 // Update mocks base method.
