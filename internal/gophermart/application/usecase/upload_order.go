@@ -6,7 +6,7 @@ import (
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/service"
+	"gophermart/internal/gophermart/domain/entity"
 	"gophermart/internal/gophermart/domain/vo"
 )
 
@@ -16,7 +16,6 @@ type UploadOrder struct {
 	orderWriter port.OrderWriter
 	validator   vo.OrderNumberValidator
 	clock       port.Clock
-	orderSvc    service.OrderService
 }
 
 // NewUploadOrder returns the upload order use case.
@@ -25,9 +24,8 @@ func NewUploadOrder(
 	orderWriter port.OrderWriter,
 	validator vo.OrderNumberValidator,
 	clock port.Clock,
-	orderSvc service.OrderService,
 ) port.UseCase[dto.UploadOrderInput, struct{}] {
-	return &UploadOrder{orderReader: orderReader, orderWriter: orderWriter, validator: validator, clock: clock, orderSvc: orderSvc}
+	return &UploadOrder{orderReader: orderReader, orderWriter: orderWriter, validator: validator, clock: clock}
 }
 
 // Execute validates the order number and creates it.
@@ -54,7 +52,7 @@ func (uc *UploadOrder) Execute(ctx context.Context, in dto.UploadOrderInput) (st
 		return struct{}{}, application.ErrConflict
 	}
 
-	order := uc.orderSvc.CreateOrder(orderNumber, in.UserID, uc.clock.Now())
+	order := entity.NewOrder(orderNumber, in.UserID, uc.clock.Now())
 
 	if err := uc.orderWriter.Create(ctx, order); err != nil {
 		return struct{}{}, err
