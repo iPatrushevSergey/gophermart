@@ -21,7 +21,7 @@ func NewUserRepository(transactor *Transactor) *UserRepository {
 }
 
 func (r *UserRepository) Create(ctx context.Context, u *entity.User) error {
-	return DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	return r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		query := `
@@ -46,7 +46,7 @@ func (r *UserRepository) Create(ctx context.Context, u *entity.User) error {
 func (r *UserRepository) FindByID(ctx context.Context, id vo.UserID) (*entity.User, error) {
 	var u entity.User
 
-	err := DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	err := r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		query := `
@@ -77,7 +77,7 @@ func (r *UserRepository) FindByID(ctx context.Context, id vo.UserID) (*entity.Us
 func (r *UserRepository) FindByLogin(ctx context.Context, login string) (*entity.User, error) {
 	var u entity.User
 
-	err := DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	err := r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		query := `
