@@ -3,6 +3,9 @@ package usecase
 import (
 	"context"
 	"errors"
+	"sync/atomic"
+
+	"golang.org/x/sync/errgroup"
 
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/application/port"
@@ -21,6 +24,7 @@ type ProcessAccrual struct {
 	clock             port.Clock
 	log               port.Logger
 	batchSize         int
+	maxWorkers        int
 	optimisticRetries int
 }
 
@@ -35,6 +39,7 @@ func NewProcessAccrual(
 	clock port.Clock,
 	log port.Logger,
 	batchSize int,
+	maxWorkers int,
 	optimisticRetries int,
 ) *ProcessAccrual {
 	return &ProcessAccrual{
@@ -47,42 +52,69 @@ func NewProcessAccrual(
 		clock:             clock,
 		log:               log,
 		batchSize:         batchSize,
+		maxWorkers:        maxWorkers,
 		optimisticRetries: optimisticRetries,
 	}
 }
 
-// Run processes one batch of pending orders. Returns the number of processed orders.
+// Run streams a batch of pending orders from the DB and processes them
+// concurrently via errgroup. Returns the number of successfully processed orders.
 func (uc *ProcessAccrual) Run(ctx context.Context) (int, error) {
-	orders, err := uc.orderReader.ListByStatuses(ctx, []entity.OrderStatus{
+	orders := uc.orderReader.StreamByStatuses(ctx, []entity.OrderStatus{
 		entity.OrderStatusNew,
 		entity.OrderStatusProcessing,
 	}, uc.batchSize)
-	if err != nil {
-		return 0, err
-	}
 
-	processed := 0
-	for _, order := range orders {
-		if ctx.Err() != nil {
-			break
-		}
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(uc.maxWorkers)
 
-		err := uc.processOrder(ctx, order)
-		if err != nil {
-			var rl *application.ErrRateLimit
-			if errors.As(err, &rl) {
-				return processed, err
+	ch := make(chan entity.Order, uc.maxWorkers)
+	var streamErr error
+
+	go func() {
+		defer close(ch)
+		for order, err := range orders {
+			if err != nil {
+				streamErr = err
+				return
 			}
-			uc.log.Warn("failed to process order accrual",
-				"order", order.Number.String(),
-				"error", err,
-			)
-			continue
+			select {
+			case ch <- order:
+			case <-gCtx.Done():
+				return
+			}
 		}
-		processed++
+	}()
+
+	var processed atomic.Int32
+
+	for order := range ch {
+		g.Go(func() error {
+			if err := uc.processOrder(gCtx, order); err != nil {
+				var rl *application.ErrRateLimit
+				if errors.As(err, &rl) {
+					return err
+				}
+				uc.log.Warn("failed to process order accrual",
+					"order", order.Number.String(),
+					"error", err,
+				)
+				return nil
+			}
+			processed.Add(1)
+			return nil
+		})
 	}
 
-	return processed, nil
+	if err := g.Wait(); err != nil {
+		return int(processed.Load()), err
+	}
+
+	if streamErr != nil {
+		return int(processed.Load()), streamErr
+	}
+
+	return int(processed.Load()), nil
 }
 
 func (uc *ProcessAccrual) processOrder(ctx context.Context, order entity.Order) error {
