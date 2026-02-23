@@ -49,7 +49,7 @@ func TestRegisterUser_Execute(t *testing.T) {
 		)
 		balanceWriter.EXPECT().Create(ctx, gomock.Any()).Return(nil)
 
-		uc := NewRegisterUser(userReader, userWriter, balanceWriter, transactor, hasher, clk, service.UserService{}, service.BalanceService{})
+		uc := NewRegisterUser(userReader, userWriter, balanceWriter, transactor, hasher, clk, service.BalanceService{})
 		id, err := uc.Execute(ctx, input)
 
 		assert.NoError(t, err)
@@ -62,7 +62,7 @@ func TestRegisterUser_Execute(t *testing.T) {
 		userReader := mocks.NewMockUserReader(ctrl)
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(&entity.User{Login: "alice"}, nil)
 
-		uc := NewRegisterUser(userReader, nil, nil, nil, nil, nil, service.UserService{}, service.BalanceService{})
+		uc := NewRegisterUser(userReader, nil, nil, nil, nil, nil, service.BalanceService{})
 		_, err := uc.Execute(ctx, input)
 
 		assert.ErrorIs(t, err, application.ErrAlreadyExists)
@@ -77,7 +77,7 @@ func TestRegisterUser_Execute(t *testing.T) {
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(nil, application.ErrNotFound)
 		hasher.EXPECT().Hash("secret").Return("", errors.New("hash failed"))
 
-		uc := NewRegisterUser(userReader, nil, nil, nil, hasher, nil, service.UserService{}, service.BalanceService{})
+		uc := NewRegisterUser(userReader, nil, nil, nil, hasher, nil, service.BalanceService{})
 		_, err := uc.Execute(ctx, input)
 
 		assert.Error(t, err)
@@ -103,7 +103,7 @@ func TestRegisterUser_Execute(t *testing.T) {
 		)
 		userWriter.EXPECT().Create(ctx, gomock.Any()).Return(errors.New("db error"))
 
-		uc := NewRegisterUser(userReader, userWriter, nil, transactor, hasher, clk, service.UserService{}, service.BalanceService{})
+		uc := NewRegisterUser(userReader, userWriter, nil, transactor, hasher, clk, service.BalanceService{})
 		_, err := uc.Execute(ctx, input)
 
 		assert.Error(t, err)
@@ -115,7 +115,7 @@ func TestRegisterUser_Execute(t *testing.T) {
 		userReader := mocks.NewMockUserReader(ctrl)
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(nil, errors.New("connection lost"))
 
-		uc := NewRegisterUser(userReader, nil, nil, nil, nil, nil, service.UserService{}, service.BalanceService{})
+		uc := NewRegisterUser(userReader, nil, nil, nil, nil, nil, service.BalanceService{})
 		_, err := uc.Execute(ctx, input)
 
 		assert.Error(t, err)
