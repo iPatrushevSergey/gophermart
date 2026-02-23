@@ -42,7 +42,7 @@ func NewOrderRepository(transactor *Transactor) *OrderRepository {
 
 // Create inserts a new order.
 func (r *OrderRepository) Create(ctx context.Context, o *entity.Order) error {
-	return DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	return r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		_, err := q.Exec(ctx, `
@@ -67,7 +67,7 @@ func (r *OrderRepository) FindByNumber(ctx context.Context, number vo.OrderNumbe
 	var statusInt int16
 	var numStr string
 
-	err := DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	err := r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		return q.QueryRow(ctx, `
@@ -101,7 +101,7 @@ func (r *OrderRepository) FindByNumber(ctx context.Context, number vo.OrderNumbe
 func (r *OrderRepository) ListByUserID(ctx context.Context, userID vo.UserID) ([]entity.Order, error) {
 	var result []entity.Order
 
-	err := DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	err := r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		rows, err := q.Query(ctx, `
@@ -164,7 +164,7 @@ func (r *OrderRepository) ListByStatuses(ctx context.Context, statuses []entity.
 
 	var result []entity.Order
 
-	err := DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	err := r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		rows, err := q.Query(ctx, `
@@ -270,7 +270,7 @@ func (r *OrderRepository) StreamByStatuses(ctx context.Context, statuses []entit
 
 // Update updates the order status, accrual, and processed_at.
 func (r *OrderRepository) Update(ctx context.Context, o *entity.Order) error {
-	return DoWithRetry(ctx, r.transactor.RetryConfig(), func() error {
+	return r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
 		_, err := q.Exec(ctx, `
