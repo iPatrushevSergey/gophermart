@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -208,6 +209,63 @@ func (r *OrderRepository) ListByStatuses(ctx context.Context, statuses []entity.
 	}
 
 	return result, nil
+}
+
+// StreamByStatuses returns a lazy iterator over orders matching the given statuses.
+// The DB cursor remains open while the caller iterates; rows are closed automatically
+// when the iterator is exhausted or the caller breaks out of the range loop.
+func (r *OrderRepository) StreamByStatuses(ctx context.Context, statuses []entity.OrderStatus, limit int) iter.Seq2[entity.Order, error] {
+	return func(yield func(entity.Order, error) bool) {
+		if len(statuses) == 0 {
+			return
+		}
+
+		ints := make([]int16, len(statuses))
+		for i, s := range statuses {
+			v, ok := statusToInt[s]
+			if !ok {
+				yield(entity.Order{}, fmt.Errorf("unknown order status: %s", s))
+				return
+			}
+			ints[i] = v
+		}
+
+		q := r.transactor.GetQuerier(ctx)
+		rows, err := q.Query(ctx, `
+			SELECT number, user_id, status, accrual, uploaded_at, processed_at
+			FROM orders
+			WHERE status = ANY($1)
+			ORDER BY uploaded_at ASC
+			LIMIT $2
+		`, ints, limit)
+		if err != nil {
+			yield(entity.Order{}, err)
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var o entity.Order
+			var statusInt int16
+			var numStr string
+
+			if err := rows.Scan(&numStr, &o.UserID, &statusInt, &o.Accrual, &o.UploadedAt, &o.ProcessedAt); err != nil {
+				yield(entity.Order{}, err)
+				return
+			}
+
+			o.Number = vo.OrderNumber(numStr)
+			o.Status = intToStatus[statusInt]
+
+			if !yield(o, nil) {
+				return
+			}
+		}
+
+		if err := rows.Err(); err != nil {
+			yield(entity.Order{}, err)
+		}
+	}
 }
 
 // Update updates the order status, accrual, and processed_at.
