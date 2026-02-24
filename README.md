@@ -1,25 +1,83 @@
-# go-musthave-group-diploma-tpl
+# GopherMart
 
-Шаблон репозитория для группового дипломного проекта курса "Go-разработчик"
+Система накопления баллов лояльности, реализованная на Go по принципам **Clean Architecture**.
 
-# Начало работы
+## Архитектура
 
-1. Склонируйте репозиторий в любую подходящую директорию на вашем компьютере
-2. В корне репозитория выполните команду `go mod init <name>` (где `<name>` — адрес вашего репозитория на GitHub без
-   префикса `https://`) для создания модуля
-
-# Обновление шаблона
-
-Чтобы иметь возможность получать обновления автотестов и других частей шаблона, выполните команду:
+Проект построен по Clean Architecture со строгим правилом зависимостей.
 
 ```
-git remote add -m master template https://github.com/yandex-praktikum/go-musthave-group-diploma-tpl.git
+domain/           Чистая бизнес-логика (сущности, value objects, доменные сервисы)
+application/      Use cases, порты (интерфейсы), DTO
+presentation/     HTTP-хендлеры, middleware, фоновые воркеры
+adapters/         PostgreSQL-репозитории, JWT, bcrypt, accrual-клиент, clock
+cmd/bootstrap/    Composition root — сборка всех зависимостей
 ```
 
-Для обновления кода автотестов выполните команду:
+## Запуск
+
+### Требования
+
+- Go 1.24+
+- PostgreSQL
+- Docker (для интеграционных тестов)
+
+### Запуск сервера
+
+```bash
+# Сборка
+make build
+
+# Запуск с флагами
+./bin/gophermart -a 127.0.0.1:8080 -d "postgres://user:pass@localhost:5432/gophermart?sslmode=disable" -r http://127.0.0.1:8081
+
+# Или напрямую
+make run
+```
+
+### Переменные окружения (переопределяют флаги)
+
+| Переменная | Флаг | Описание |
+|---|---|---|
+| `RUN_ADDRESS` | `-a` | Адрес сервера (по умолчанию `127.0.0.1:8080`) |
+| `DATABASE_URI` | `-d` | DSN PostgreSQL |
+| `ACCRUAL_SYSTEM_ADDRESS` | `-r` | URL сервиса начислений |
+| `JWT_SECRET` | `-s` | Секрет подписи JWT |
+| `JWT_TTL` | `-t` | Время жизни токена (по умолчанию `24h`) |
+| `LOG_LEVEL` | `-l` | Уровень логирования (по умолчанию `info`) |
+
+### Запуск сервиса начислений (accrual)
+
+В каталоге `cmd/accrual/` находятся готовые бинарники для разных платформ:
 
 ```
-git fetch template && git checkout template/master .github
+accrual_darwin_amd64    macOS (Intel)
+accrual_darwin_arm64    macOS (Apple Silicon)
+accrual_linux_amd64     Linux
+accrual_windows_amd64   Windows
 ```
 
-Затем добавьте полученные изменения в свой репозиторий.
+```bash
+# Linux / macOS
+chmod +x cmd/accrual/accrual_linux_amd64
+./cmd/accrual/accrual_linux_amd64 -a 127.0.0.1:8081
+
+# Windows
+cmd\accrual\accrual_windows_amd64 -a 127.0.0.1:8081
+```
+
+> Адрес, на котором запущен accrual, передаётся серверу GopherMart через флаг `-r` или переменную `ACCRUAL_SYSTEM_ADDRESS`.
+
+### Тесты
+
+```bash
+# Unit-тесты
+go test ./...
+
+# Интеграционные тесты (требуется Docker)
+go test -tags integration ./...
+
+# Покрытие
+go test ./... -coverprofile=coverage.out
+go tool cover -func=coverage.out
+```
