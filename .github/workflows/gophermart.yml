@@ -47,18 +47,18 @@ jobs:
 
       - name: Prepare binaries
         run: |
-          (cd cmd/gophermart && go build -buildvcs=false -o gophermart)
-          (cd cmd/accrual && chmod +x accrual_linux_amd64)
+          (cd app/cmd/gophermart && go build -buildvcs=false -o gophermart)
+          (cd app/cmd/accrual && chmod +x accrual_linux_amd64)
 
       - name: Test
         run: |
           gophermarttest \
             -test.v -test.run=^TestGophermart$ \
-            -gophermart-binary-path=cmd/gophermart/gophermart \
+            -gophermart-binary-path=app/cmd/gophermart/gophermart \
             -gophermart-host=localhost \
             -gophermart-port=8080 \
             -gophermart-database-uri="postgresql://postgres:postgres@postgres/praktikum?sslmode=disable" \
-            -accrual-binary-path=cmd/accrual/accrual_linux_amd64 \
+            -accrual-binary-path=app/cmd/accrual/accrual_linux_amd64 \
             -accrual-host=localhost \
             -accrual-port=$(random unused-port) \
             -accrual-database-uri="postgresql://postgres:postgres@postgres/praktikum?sslmode=disable"

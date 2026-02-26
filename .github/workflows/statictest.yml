@@ -31,4 +31,5 @@ jobs:
 
       - name: Run statictest
         run: |
+          cd app
           go vet -vettool=$(which statictest) ./...
