@@ -9,7 +9,7 @@ import (
 	"gophermart/internal/gophermart/config"
 )
 
-// Run loads config, initializes logger, DB, migrations, app, starts server and waits for graceful shutdown.
+// Run loads config, initializes logger and DB, starts app, and waits for graceful shutdown.
 func Run() error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -39,13 +39,6 @@ func Run() error {
 		return fmt.Errorf("init database pool: %w", err)
 	}
 	defer pool.Close()
-
-	if cfg.DB.URI != "" {
-		if err := RunMigrations(cfg.DB.URI, "migrations/gophermart"); err != nil {
-			return fmt.Errorf("run migrations: %w", err)
-		}
-		log.Info("database migrations applied")
-	}
 
 	transactor := postgres.NewTransactor(pool,
 		postgres.WithMaxRetries(cfg.Retry.MaxRetries),
