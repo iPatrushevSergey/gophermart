@@ -2,70 +2,49 @@ package postgres
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/jackc/pgx/v5"
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+	trmmanager "github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type txKey struct{}
-
-// Transactor manages database transactions via pgxpool with retry support.
+// Transactor coordinates PostgreSQL transactions via go-transaction-manager
+// and applies retry policy for transaction and repository operations.
 type Transactor struct {
-	pool      *pgxpool.Pool
+	// trManager opens/commits/rolls back transactions and stores tx in context.
+	trManager *trmmanager.Manager
+	// getter resolves either tx from context or fallback DB connection.
+	getter *trmpgx.CtxGetter
+	// pool is the default DB connection used when context has no active tx.
+	pool *pgxpool.Pool
+	// retryOpts configure retry behavior (attempts, backoff, retriable errors).
 	retryOpts []RetryOption
 }
 
-// NewTransactor creates a new Transactor.
+// NewTransactor creates a transactor with transaction manager and retry options.
 func NewTransactor(pool *pgxpool.Pool, opts ...RetryOption) *Transactor {
-	return &Transactor{pool: pool, retryOpts: opts}
+	return &Transactor{
+		trManager: trmmanager.Must(trmpgx.NewDefaultFactory(pool)),
+		getter:    trmpgx.DefaultCtxGetter,
+		pool:      pool,
+		retryOpts: opts,
+	}
 }
 
-// RunInTransaction executes the given function within a transaction.
-// Retries the entire transaction on retriable errors (e.g. deadlock, serialization failure).
+// RunInTransaction executes fn inside a transaction.
+// The whole transaction is retried according to retryOpts on retriable errors.
 func (t *Transactor) RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
-	// If transaction already exists in context, reuse it (nested call).
-	if _, ok := ctx.Value(txKey{}).(pgx.Tx); ok {
-		return fn(ctx)
-	}
-
 	return DoWithRetry(ctx, func() error {
-		return t.runTx(ctx, fn)
+		return t.trManager.Do(ctx, fn)
 	}, t.retryOpts...)
 }
 
-func (t *Transactor) runTx(ctx context.Context, fn func(ctx context.Context) error) error {
-	tx, err := t.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-
-	defer func() {
-		_ = tx.Rollback(ctx)
-	}()
-
-	ctxWithTx := context.WithValue(ctx, txKey{}, tx)
-
-	if err := fn(ctxWithTx); err != nil {
-		return err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
-}
-
-// GetQuerier returns the transaction from context if present, otherwise the pool.
+// GetQuerier returns tx from context when inside transaction, otherwise pool.
 func (t *Transactor) GetQuerier(ctx context.Context) Querier {
-	if tx, ok := ctx.Value(txKey{}).(pgx.Tx); ok {
-		return tx
-	}
-	return t.pool
+	return t.getter.DefaultTrOrDB(ctx, t.pool)
 }
 
-// DoWithRetry executes the operation with the transactor's retry options.
+// DoWithRetry executes op with the transactor retry configuration.
 func (t *Transactor) DoWithRetry(ctx context.Context, op func() error) error {
 	return DoWithRetry(ctx, op, t.retryOpts...)
 }
