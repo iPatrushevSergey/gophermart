@@ -68,7 +68,7 @@ func NewApp(cfg config.Config, log port.Logger, transactor *postgres.Transactor)
 	}
 
 	accrualWorker := worker.NewAccrualWorker(
-		ucFactory.ProcessAccrualUseCase(), log, cfg.Accrual.PollInterval,
+		ucFactory, log, cfg.Accrual.PollInterval,
 	)
 
 	return &App{Server: srv, AccrualWorker: accrualWorker}
