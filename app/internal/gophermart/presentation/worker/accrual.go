@@ -7,6 +7,7 @@ import (
 
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/presentation/factory"
 )
 
 // AccrualWorker polls the accrual system and updates order statuses.
@@ -17,9 +18,9 @@ type AccrualWorker struct {
 }
 
 // NewAccrualWorker creates a new accrual background worker.
-func NewAccrualWorker(processAccrual port.BackgroundRunner, log port.Logger, pollInterval time.Duration) *AccrualWorker {
+func NewAccrualWorker(ucFactory factory.UseCaseFactory, log port.Logger, pollInterval time.Duration) *AccrualWorker {
 	return &AccrualWorker{
-		processAccrual: processAccrual,
+		processAccrual: ucFactory.ProcessAccrualUseCase(),
 		log:            log,
 		pollInterval:   pollInterval,
 	}
