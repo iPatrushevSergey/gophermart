@@ -7,7 +7,7 @@ import (
 	"gophermart/internal/gophermart/domain/service"
 	"gophermart/internal/gophermart/domain/vo"
 	"gophermart/internal/gophermart/presentation/factory"
-	"gophermart/pkg/option"
+	"gophermart/internal/pkg/option"
 )
 
 // useCaseFactory implements factory.UseCaseFactory; built in composition root.

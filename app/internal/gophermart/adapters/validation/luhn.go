@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"gophermart/internal/shared/luhn"
+	"gophermart/internal/pkg/luhn"
 )
 
 // LuhnValidator validates using the Luhn algorithm.

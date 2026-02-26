@@ -14,7 +14,7 @@ import (
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/domain/entity"
 	"gophermart/internal/gophermart/domain/vo"
-	"gophermart/internal/gophermart/testutil"
+	"gophermart/internal/pkg/testutil"
 )
 
 func setupTransactor(t *testing.T) *postgres.Transactor {

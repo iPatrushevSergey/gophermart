@@ -22,7 +22,7 @@ import (
 	portmocks "gophermart/internal/gophermart/application/port/mocks"
 	"gophermart/internal/gophermart/domain/service"
 	"gophermart/internal/gophermart/presentation/http/handler"
-	"gophermart/internal/gophermart/testutil"
+	"gophermart/internal/pkg/testutil"
 
 	"gophermart/cmd/gophermart/bootstrap"
 

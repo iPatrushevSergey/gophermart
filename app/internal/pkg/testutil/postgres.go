@@ -95,5 +95,5 @@ func applyMigrations(t *testing.T, pool *pgxpool.Pool, dir string) {
 // migrationsDir returns an absolute path to the migrations directory.
 func migrationsDir() string {
 	_, filename, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(filename), "..", "..", "..", "migrations", "gophermart")
+	return filepath.Join(filepath.Dir(filename), "..", "..", "..", "..", "migrations", "gophermart")
 }
