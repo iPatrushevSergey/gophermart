@@ -1,26 +1,27 @@
 package bootstrap
 
 import (
-	"errors"
+	"database/sql"
 	"fmt"
 
-	"github.com/golang-migrate/migrate/v4"
+	"github.com/pressly/goose/v3"
 
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // RunMigrations applies all pending database migrations from the given directory.
 func RunMigrations(dsn, sourceDir string) error {
-	m, err := migrate.New("file://"+sourceDir, dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return fmt.Errorf("failed to initialize migrations: %w", err)
 	}
+	defer db.Close()
 
-	if err := m.Up(); err != nil {
-		if errors.Is(err, migrate.ErrNoChange) {
-			return nil
-		}
+	if err := goose.SetDialect("postgres"); err != nil {
+		return fmt.Errorf("failed to set migration dialect: %w", err)
+	}
+
+	if err := goose.Up(db, sourceDir); err != nil {
 		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
 
