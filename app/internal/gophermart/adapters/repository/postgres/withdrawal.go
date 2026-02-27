@@ -3,6 +3,10 @@ package postgres
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+
+	"gophermart/internal/gophermart/adapters/repository/postgres/converter"
+	"gophermart/internal/gophermart/adapters/repository/postgres/model"
 	"gophermart/internal/gophermart/domain/entity"
 	"gophermart/internal/gophermart/domain/vo"
 )
@@ -10,22 +14,27 @@ import (
 // WithdrawalRepository is a PostgreSQL implementation of port.WithdrawalRepository.
 type WithdrawalRepository struct {
 	transactor *Transactor
+	conv       converter.WithdrawalConverter
 }
 
 // NewWithdrawalRepository creates a new WithdrawalRepository.
 func NewWithdrawalRepository(transactor *Transactor) *WithdrawalRepository {
-	return &WithdrawalRepository{transactor: transactor}
+	return &WithdrawalRepository{
+		transactor: transactor,
+		conv:       &converter.WithdrawalConverterImpl{},
+	}
 }
 
 // Create inserts a new withdrawal record.
 func (r *WithdrawalRepository) Create(ctx context.Context, w *entity.Withdrawal) error {
 	return r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
+		dbWithdrawal := r.conv.ToModel(*w)
 
 		_, err := q.Exec(ctx, `
 			INSERT INTO withdrawals (user_id, order_number, amount, processed_at)
 			VALUES ($1, $2, $3, $4)
-		`, w.UserID, w.OrderNumber.String(), w.Amount, w.ProcessedAt)
+		`, dbWithdrawal.UserID, dbWithdrawal.OrderNumber, dbWithdrawal.Amount, dbWithdrawal.ProcessedAt)
 
 		return err
 	})
@@ -49,25 +58,17 @@ func (r *WithdrawalRepository) ListByUserID(ctx context.Context, userID vo.UserI
 		}
 		defer rows.Close()
 
-		result = result[:0]
-		for rows.Next() {
-			var w entity.Withdrawal
-			var numStr string
-
-			if err := rows.Scan(
-				&w.UserID,
-				&numStr,
-				&w.Amount,
-				&w.ProcessedAt,
-			); err != nil {
-				return err
-			}
-
-			w.OrderNumber = vo.OrderNumber(numStr)
-			result = append(result, w)
+		dbRows, err := pgx.CollectRows(rows, pgx.RowToStructByPos[model.Withdrawal])
+		if err != nil {
+			return err
 		}
 
-		return rows.Err()
+		result = result[:0]
+		for _, dbRow := range dbRows {
+			result = append(result, r.conv.ToEntity(dbRow))
+		}
+
+		return nil
 	})
 
 	if err != nil {
