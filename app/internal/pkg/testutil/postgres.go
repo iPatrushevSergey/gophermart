@@ -4,18 +4,20 @@ package testutil
 
 import (
 	"context"
-	"os"
+	"database/sql"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 const (
@@ -62,34 +64,24 @@ func SetupPostgres(t *testing.T) *pgxpool.Pool {
 		pool.Close()
 	})
 
-	applyMigrations(t, pool, migrationsDir())
+	applyMigrations(t, dsn, migrationsDir())
 
 	return pool
 }
 
-// applyMigrations reads all *.up.sql files from dir, sorts them by name
-// and executes each one against the pool.
-func applyMigrations(t *testing.T, pool *pgxpool.Pool, dir string) {
+// applyMigrations runs all pending goose migrations from dir.
+func applyMigrations(t *testing.T, dsn, dir string) {
 	t.Helper()
 
-	entries, err := os.ReadDir(dir)
-	require.NoError(t, err, "failed to read migrations directory: %s", dir)
+	db, err := sql.Open("pgx", dsn)
+	require.NoError(t, err, "failed to initialize migrations")
+	defer db.Close()
 
-	var upFiles []string
-	for _, e := range entries {
-		if !e.IsDir() && filepath.Ext(e.Name()) == ".sql" && len(e.Name()) > 7 && e.Name()[len(e.Name())-7:] == ".up.sql" {
-			upFiles = append(upFiles, e.Name())
-		}
-	}
-	sort.Strings(upFiles)
+	err = goose.SetDialect("postgres")
+	require.NoError(t, err, "failed to set migration dialect")
 
-	ctx := context.Background()
-	for _, f := range upFiles {
-		sql, err := os.ReadFile(filepath.Join(dir, f))
-		require.NoError(t, err, "failed to read migration file %s", f)
-		_, err = pool.Exec(ctx, string(sql))
-		require.NoError(t, err, "failed to apply migration %s", f)
-	}
+	err = goose.Up(db, dir)
+	require.NoError(t, err, "failed to apply migrations")
 }
 
 // migrationsDir returns an absolute path to the migrations directory.
