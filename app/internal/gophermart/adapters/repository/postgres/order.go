@@ -9,6 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"gophermart/internal/gophermart/adapters/repository/postgres/converter"
+	"gophermart/internal/gophermart/adapters/repository/postgres/model"
 	"gophermart/internal/gophermart/application"
 	"gophermart/internal/gophermart/domain/entity"
 	"gophermart/internal/gophermart/domain/vo"
@@ -22,33 +24,33 @@ var statusToInt = map[entity.OrderStatus]int16{
 	entity.OrderStatusProcessed:  3,
 }
 
-// intToStatus maps DB SMALLINT to domain OrderStatus.
-var intToStatus = map[int16]entity.OrderStatus{
-	0: entity.OrderStatusNew,
-	1: entity.OrderStatusProcessing,
-	2: entity.OrderStatusInvalid,
-	3: entity.OrderStatusProcessed,
-}
-
 // OrderRepository is a PostgreSQL implementation of port.OrderRepository.
 type OrderRepository struct {
 	transactor *Transactor
+	conv       converter.OrderConverter
 }
 
 // NewOrderRepository creates a new OrderRepository.
 func NewOrderRepository(transactor *Transactor) *OrderRepository {
-	return &OrderRepository{transactor: transactor}
+	return &OrderRepository{
+		transactor: transactor,
+		conv:       &converter.OrderConverterImpl{},
+	}
 }
 
 // Create inserts a new order.
 func (r *OrderRepository) Create(ctx context.Context, o *entity.Order) error {
 	return r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
+		dbOrder, err := r.conv.ToModel(*o)
+		if err != nil {
+			return err
+		}
 
-		_, err := q.Exec(ctx, `
+		_, err = q.Exec(ctx, `
 			INSERT INTO orders (number, user_id, status, accrual, uploaded_at)
 			VALUES ($1, $2, $3, $4, $5)
-		`, o.Number.String(), o.UserID, statusToInt[o.Status], o.Accrual, o.UploadedAt)
+		`, dbOrder.Number, dbOrder.UserID, dbOrder.Status, dbOrder.Accrual, dbOrder.UploadedAt)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -64,24 +66,27 @@ func (r *OrderRepository) Create(ctx context.Context, o *entity.Order) error {
 // FindByNumber returns the order by its number or application.ErrNotFound.
 func (r *OrderRepository) FindByNumber(ctx context.Context, number vo.OrderNumber) (*entity.Order, error) {
 	var o entity.Order
-	var statusInt int16
-	var numStr string
 
 	err := r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
 
-		return q.QueryRow(ctx, `
+		rows, err := q.Query(ctx, `
 			SELECT number, user_id, status, accrual, uploaded_at, processed_at
 			FROM orders
 			WHERE number = $1
-		`, number.String()).Scan(
-			&numStr,
-			&o.UserID,
-			&statusInt,
-			&o.Accrual,
-			&o.UploadedAt,
-			&o.ProcessedAt,
-		)
+		`, number.String())
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		dbRow, err := pgx.CollectOneRow(rows, pgx.RowToStructByPos[model.Order])
+		if err != nil {
+			return err
+		}
+
+		o, err = r.conv.ToEntity(dbRow)
+		return err
 	})
 
 	if err != nil {
@@ -90,9 +95,6 @@ func (r *OrderRepository) FindByNumber(ctx context.Context, number vo.OrderNumbe
 		}
 		return nil, err
 	}
-
-	o.Number = vo.OrderNumber(numStr)
-	o.Status = intToStatus[statusInt]
 
 	return &o, nil
 }
@@ -115,29 +117,21 @@ func (r *OrderRepository) ListByUserID(ctx context.Context, userID vo.UserID) ([
 		}
 		defer rows.Close()
 
-		result = result[:0] // reset on retry
-		for rows.Next() {
-			var o entity.Order
-			var statusInt int16
-			var numStr string
+		dbRows, err := pgx.CollectRows(rows, pgx.RowToStructByPos[model.Order])
+		if err != nil {
+			return err
+		}
 
-			if err := rows.Scan(
-				&numStr,
-				&o.UserID,
-				&statusInt,
-				&o.Accrual,
-				&o.UploadedAt,
-				&o.ProcessedAt,
-			); err != nil {
+		result = result[:0] // reset on retry
+		for _, dbRow := range dbRows {
+			o, err := r.conv.ToEntity(dbRow)
+			if err != nil {
 				return err
 			}
-
-			o.Number = vo.OrderNumber(numStr)
-			o.Status = intToStatus[statusInt]
 			result = append(result, o)
 		}
 
-		return rows.Err()
+		return nil
 	})
 
 	if err != nil {
@@ -179,29 +173,21 @@ func (r *OrderRepository) ListByStatuses(ctx context.Context, statuses []entity.
 		}
 		defer rows.Close()
 
-		result = result[:0]
-		for rows.Next() {
-			var o entity.Order
-			var statusInt int16
-			var numStr string
+		dbRows, err := pgx.CollectRows(rows, pgx.RowToStructByPos[model.Order])
+		if err != nil {
+			return err
+		}
 
-			if err := rows.Scan(
-				&numStr,
-				&o.UserID,
-				&statusInt,
-				&o.Accrual,
-				&o.UploadedAt,
-				&o.ProcessedAt,
-			); err != nil {
+		result = result[:0]
+		for _, dbRow := range dbRows {
+			o, err := r.conv.ToEntity(dbRow)
+			if err != nil {
 				return err
 			}
-
-			o.Number = vo.OrderNumber(numStr)
-			o.Status = intToStatus[statusInt]
 			result = append(result, o)
 		}
 
-		return rows.Err()
+		return nil
 	})
 
 	if err != nil {
@@ -245,17 +231,17 @@ func (r *OrderRepository) StreamByStatuses(ctx context.Context, statuses []entit
 		defer rows.Close()
 
 		for rows.Next() {
-			var o entity.Order
-			var statusInt int16
-			var numStr string
-
-			if err := rows.Scan(&numStr, &o.UserID, &statusInt, &o.Accrual, &o.UploadedAt, &o.ProcessedAt); err != nil {
+			dbRow, err := pgx.RowToStructByPos[model.Order](rows)
+			if err != nil {
 				yield(entity.Order{}, err)
 				return
 			}
 
-			o.Number = vo.OrderNumber(numStr)
-			o.Status = intToStatus[statusInt]
+			o, err := r.conv.ToEntity(dbRow)
+			if err != nil {
+				yield(entity.Order{}, err)
+				return
+			}
 
 			if !yield(o, nil) {
 				return
@@ -272,12 +258,16 @@ func (r *OrderRepository) StreamByStatuses(ctx context.Context, statuses []entit
 func (r *OrderRepository) Update(ctx context.Context, o *entity.Order) error {
 	return r.transactor.DoWithRetry(ctx, func() error {
 		q := r.transactor.GetQuerier(ctx)
+		dbOrder, err := r.conv.ToModel(*o)
+		if err != nil {
+			return err
+		}
 
-		_, err := q.Exec(ctx, `
+		_, err = q.Exec(ctx, `
 			UPDATE orders
 			SET status = $1, accrual = $2, processed_at = $3
 			WHERE number = $4
-		`, statusToInt[o.Status], o.Accrual, o.ProcessedAt, o.Number.String())
+		`, dbOrder.Status, dbOrder.Accrual, dbOrder.ProcessedAt, dbOrder.Number)
 
 		return err
 	})
