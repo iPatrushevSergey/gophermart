@@ -29,6 +29,11 @@ func NewClient(baseURL string, httpClient *http.Client) *Client {
 	}
 }
 
+// NewClientFromConfig creates a new accrual client from adapter config.
+func NewClientFromConfig(cfg Config) *Client {
+	return NewClient(cfg.Address, &http.Client{Timeout: cfg.HTTPTimeout})
+}
+
 type accrualResponse struct {
 	Order   string   `json:"order"`
 	Status  string   `json:"status"`
