@@ -7,11 +7,11 @@
 Проект построен по Clean Architecture со строгим правилом зависимостей.
 
 ```
-domain/           Чистая бизнес-логика (сущности, value objects, доменные сервисы)
-application/      Use cases, порты (интерфейсы), DTO
-presentation/     HTTP-хендлеры, middleware, фоновые воркеры
-adapters/         PostgreSQL-репозитории, JWT, bcrypt, accrual-клиент, clock
-cmd/bootstrap/    Composition root — сборка всех зависимостей
+app/internal/gophermart/domain/         Чистая бизнес-логика (сущности, value objects, доменные сервисы)
+app/internal/gophermart/application/    Use cases, порты (интерфейсы), DTO
+app/internal/gophermart/presentation/   HTTP-хендлеры, middleware, фоновые воркеры
+app/internal/gophermart/adapters/       PostgreSQL-репозитории, JWT, bcrypt, accrual-клиент, clock
+app/cmd/gophermart/bootstrap/           Composition root — сборка всех зависимостей
 ```
 
 ## Запуск
@@ -28,14 +28,30 @@ cmd/bootstrap/    Composition root — сборка всех зависимос�
 # Сборка
 make build
 
-# Запуск с флагами
-./bin/gophermart -a 127.0.0.1:8080 -d "postgres://user:pass@localhost:5432/gophermart?sslmode=disable" -r http://127.0.0.1:8081
-
-# Или напрямую
+# Запуск с YAML-конфигом по умолчанию (app/configs/gophermart.yaml)
 make run
+
+# Запуск с флагами
+cd app && ./bin/gophermart -a 127.0.0.1:8080 -d "postgres://user:pass@localhost:5432/gophermart?sslmode=disable" -r http://127.0.0.1:8081
+
+# Запуск с кастомным config файлом
+cd app && ./bin/gophermart --config ./configs/gophermart.yaml
+
+# Или напрямую без сборки
+cd app && go run -tags=go_json ./cmd/gophermart
 ```
 
-### Переменные окружения (переопределяют флаги)
+### Приоритет источников конфигурации
+
+1. Флаги CLI
+2. Переменные окружения
+3. YAML-файл (`app/configs/gophermart.yaml` по умолчанию)
+4. Значения по умолчанию в коде
+
+### Переменные окружения
+
+`app/configs/gophermart.yaml` хранит baseline non-secret конфиг, а ENV используется для секретов и env-specific override.
+Обязательные секреты: `DATABASE_URI`, `JWT_SECRET` (приложение завершится с ошибкой при пустых значениях).
 
 | Переменная | Флаг | Описание |
 |---|---|---|
@@ -45,26 +61,38 @@ make run
 | `JWT_SECRET` | `-s` | Секрет подписи JWT |
 | `JWT_TTL` | `-t` | Время жизни токена (по умолчанию `24h`) |
 | `LOG_LEVEL` | `-l` | Уровень логирования (по умолчанию `info`) |
+| `BCRYPT_COST` | `--bcrypt-cost` | Фактор bcrypt (4-31) |
+| `DB_MAX_CONNS` | `-` | Максимум соединений пула |
+| `DB_MIN_CONNS` | `-` | Минимум соединений пула |
+| `DB_MAX_CONN_LIFE` | `-` | Максимальное время жизни соединения |
+| `DB_MAX_CONN_IDLE` | `-` | Максимальный idle соединения |
+| `DB_HEALTH_CHECK` | `-` | Период health-check пула |
+| `DB_RETRY_MAX_RETRIES` | `-` | Количество retry для DB операций |
+| `DB_RETRY_BASE_DELAY` | `-` | Базовая задержка retry |
+| `DB_RETRY_MAX_DELAY` | `-` | Максимальная задержка retry |
+| `ACCRUAL_POLL_INTERVAL` | `-` | Интервал фонового опроса accrual |
+| `ACCRUAL_HTTP_TIMEOUT` | `-` | Таймаут HTTP клиента accrual |
+| `ACCRUAL_BATCH_SIZE` | `-` | Размер батча обработки accrual |
+| `ACCRUAL_MAX_WORKERS` | `-` | Количество воркеров accrual |
+| `OPTIMISTIC_RETRIES` | `-` | Количество retry optimistic lock |
+
+### Локальный `.env`
+
+```bash
+# Создать локальный файл (не коммитится)
+cp app/.env.example app/.env
+
+# Запустить (приложение подхватит app/.env автоматически, если файл существует)
+make run
+```
+
+Файл `app/.env.example` содержит только секреты и точечные override-переменные. Реальные значения (`JWT_SECRET`, пароль в `DATABASE_URI`) храните в `app/.env`.
 
 ### Запуск сервиса начислений (accrual)
 
-В каталоге `cmd/accrual/` находятся готовые бинарники для разных платформ:
-
-```
-accrual_darwin_amd64    macOS (Intel)
-accrual_darwin_arm64    macOS (Apple Silicon)
-accrual_linux_amd64     Linux
-accrual_windows_amd64   Windows
-```
-
-```bash
-# Linux / macOS
-chmod +x cmd/accrual/accrual_linux_amd64
-./cmd/accrual/accrual_linux_amd64 -a 127.0.0.1:8081
-
-# Windows
-cmd\accrual\accrual_windows_amd64 -a 127.0.0.1:8081
-```
+Бинарник accrual не входит в этот репозиторий. Запустите его отдельно и передайте адрес в GopherMart через:
+- флаг `-r`
+- или переменную `ACCRUAL_SYSTEM_ADDRESS`
 
 > Адрес, на котором запущен accrual, передаётся серверу GopherMart через флаг `-r` или переменную `ACCRUAL_SYSTEM_ADDRESS`.
 
@@ -72,12 +100,11 @@ cmd\accrual\accrual_windows_amd64 -a 127.0.0.1:8081
 
 ```bash
 # Unit-тесты
-go test ./...
+make test
 
 # Интеграционные тесты (требуется Docker)
-go test -tags integration ./...
+make test-integration
 
 # Покрытие
-go test ./... -coverprofile=coverage.out
-go tool cover -func=coverage.out
+make cover
 ```
