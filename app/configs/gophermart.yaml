@@ -1,0 +1,32 @@
+server:
+  address: "127.0.0.1:8080"
+  shutdown_timeout: "5s"
+
+database:
+  uri: ""
+  max_conns: 25
+  min_conns: 5
+  max_conn_life: "1h"
+  max_conn_idle: "30m"
+  health_check: "1m"
+  retry:
+    max_retries: 3
+    base_delay: "100ms"
+    max_delay: "2s"
+
+auth:
+  jwt_secret: ""
+  jwt_ttl: "24h"
+  bcrypt_cost: 10
+
+logger:
+  level: "info"
+
+accrual:
+  address: "127.0.0.1:8081"
+  poll_interval: "2s"
+  http_timeout: "10s"
+  batch_size: 50
+  max_workers: 5
+
+optimistic_retries: 3
