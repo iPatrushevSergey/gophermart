@@ -27,8 +27,7 @@ func NewApp(cfg config.Config, log port.Logger, transactor *postgres.Transactor)
 	tokens := auth.NewJWTProvider(cfg.Auth.JWTSecret, cfg.Auth.JWTTTL)
 	luhnValidator := validation.NewLuhnValidator()
 
-	accrualHTTP := &http.Client{Timeout: cfg.Accrual.HTTPTimeout}
-	accrualClient := accrual.NewClient(cfg.Accrual.Address, accrualHTTP)
+	accrualClient := accrual.NewClientFromConfig(cfg.Accrual.Client)
 
 	userRepo := postgres.NewUserRepository(transactor)
 	orderRepo := postgres.NewOrderRepository(transactor)
@@ -53,7 +52,7 @@ func NewApp(cfg config.Config, log port.Logger, transactor *postgres.Transactor)
 		WithLogger(log),
 		WithBatchSize(cfg.Accrual.BatchSize),
 		WithMaxWorkers(cfg.Accrual.MaxWorkers),
-		WithOptimisticRetries(cfg.Retry.OptimisticRetries),
+		WithOptimisticRetries(cfg.OptimisticRetries),
 	)
 
 	userHandler := handler.NewUserHandler(ucFactory, tokens, log)
