@@ -55,6 +55,8 @@ jobs:
           (cd app && go run ./cmd/migrate -d "postgresql://postgres:postgres@postgres/praktikum?sslmode=disable" -dir ../migrations/gophermart)
 
       - name: Test
+        env:
+          JWT_SECRET: ci-test-secret
         run: |
           gophermarttest \
             -test.v -test.run=^TestGophermart$ \
