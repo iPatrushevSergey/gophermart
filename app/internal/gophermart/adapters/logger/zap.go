@@ -18,15 +18,15 @@ func NewZapLogger(zl *zap.Logger) port.Logger {
 	return &ZapLogger{zl: zl}
 }
 
-// Initialize creates a zap.Logger with the given level and returns a port.Logger.
-func Initialize(level string) (port.Logger, error) {
-	lvl, err := zap.ParseAtomicLevel(level)
+// Initialize creates a zap.Logger from adapter config and returns a port.Logger.
+func Initialize(cfg Config) (port.Logger, error) {
+	lvl, err := zap.ParseAtomicLevel(cfg.Level)
 	if err != nil {
 		return nil, err
 	}
-	cfg := zap.NewProductionConfig()
-	cfg.Level = lvl
-	zl, err := cfg.Build()
+	zapCfg := zap.NewProductionConfig()
+	zapCfg.Level = lvl
+	zl, err := zapCfg.Build()
 	if err != nil {
 		return nil, err
 	}
