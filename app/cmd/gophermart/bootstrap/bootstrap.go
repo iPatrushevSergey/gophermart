@@ -16,7 +16,7 @@ func Run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	log, err := logger.Initialize(cfg.Log.Level)
+	log, err := logger.Initialize(cfg.Logger)
 	if err != nil {
 		return fmt.Errorf("init logger: %w", err)
 	}
@@ -24,25 +24,33 @@ func Run() error {
 
 	log.Debug("starting server",
 		"address", cfg.Server.Address,
-		"accrual_address", cfg.Accrual.Address,
-		"database", cfg.DB.URI,
+		"accrual_address", cfg.Accrual.Client.Address,
+		"database_configured", cfg.DB.Pool.URI != "",
+		"db_max_conns", cfg.DB.Pool.MaxConns,
+		"db_min_conns", cfg.DB.Pool.MinConns,
+		"db_retry_max_retries", cfg.DB.Retry.MaxRetries,
 		"jwt_ttl", cfg.Auth.JWTTTL,
-		"log_level", cfg.Log.Level,
+		"jwt_secret_configured", cfg.Auth.JWTSecret != "",
+		"log_level", cfg.Logger.Level,
 		"bcrypt_cost", cfg.Auth.BCryptCost,
+		"accrual_poll_interval", cfg.Accrual.PollInterval,
+		"accrual_batch_size", cfg.Accrual.BatchSize,
+		"accrual_max_workers", cfg.Accrual.MaxWorkers,
+		"optimistic_retries", cfg.OptimisticRetries,
 	)
 
 	// Database
 	ctx := context.Background()
 
-	pool, err := NewPool(ctx, cfg.DB)
+	pool, err := postgres.NewPool(ctx, cfg.DB.Pool)
 	if err != nil {
 		return fmt.Errorf("init database pool: %w", err)
 	}
 	defer pool.Close()
 
 	transactor := postgres.NewTransactor(pool,
-		postgres.WithMaxRetries(cfg.Retry.MaxRetries),
-		postgres.WithExponentialBackoff(cfg.Retry.BaseDelay, cfg.Retry.MaxDelay),
+		postgres.WithMaxRetries(cfg.DB.Retry.MaxRetries),
+		postgres.WithExponentialBackoff(cfg.DB.Retry.BaseDelay, cfg.DB.Retry.MaxDelay),
 	)
 
 	app := NewApp(cfg, log, transactor)
