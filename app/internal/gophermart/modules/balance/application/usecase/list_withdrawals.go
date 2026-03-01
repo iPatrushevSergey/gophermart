@@ -3,9 +3,10 @@ package usecase
 import (
 	"context"
 
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/vo"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/balance/application/dto"
+	"gophermart/internal/gophermart/modules/balance/application/port"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
 )
 
 // ListWithdrawals returns all withdrawals for the given user.
@@ -14,7 +15,7 @@ type ListWithdrawals struct {
 }
 
 // NewListWithdrawals returns the list withdrawals use case.
-func NewListWithdrawals(withdrawalReader port.WithdrawalReader) port.UseCase[vo.UserID, []dto.WithdrawalOutput] {
+func NewListWithdrawals(withdrawalReader port.WithdrawalReader) appport.UseCase[vo.UserID, []dto.WithdrawalOutput] {
 	return &ListWithdrawals{withdrawalReader: withdrawalReader}
 }
 
