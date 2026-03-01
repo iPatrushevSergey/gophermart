@@ -3,8 +3,8 @@ package port
 import (
 	"context"
 
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/balance/domain/entity"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
 )
 
 // WithdrawalReader provides read-only access to withdrawals for balance module.
