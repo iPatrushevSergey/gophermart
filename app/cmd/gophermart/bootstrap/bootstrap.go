@@ -55,10 +55,10 @@ func Run() error {
 
 	app := NewApp(cfg, log, transactor)
 
-	// Start accrual background worker
+	// Start module background workers
 	workerCtx, workerCancel := context.WithCancel(ctx)
 	defer workerCancel()
-	app.AccrualWorker.Start(workerCtx)
+	app.StartBackground(workerCtx)
 
 	StartServer(app.Server, log)
 	return WaitForShutdown(app.Server, cfg.Server.ShutdownTimeout, log)
