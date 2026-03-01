@@ -10,9 +10,9 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"gophermart/internal/gophermart/adapters/accrual"
 	"gophermart/internal/gophermart/adapters/logger"
 	"gophermart/internal/gophermart/adapters/repository/postgres"
+	ordersaccrual "gophermart/internal/gophermart/modules/orders/adapters/accrual"
 )
 
 // Config holds the grouped application configuration.
@@ -41,7 +41,7 @@ type AuthConfig struct {
 
 // AccrualConfig groups adapter and worker settings for accrual processing.
 type AccrualConfig struct {
-	Client       accrual.Config
+	Client       ordersaccrual.Config
 	PollInterval time.Duration
 	BatchSize    int
 	MaxWorkers   int
@@ -193,7 +193,7 @@ func LoadConfig() (Config, error) {
 			},
 		},
 		Accrual: AccrualConfig{
-			Client: accrual.Config{
+			Client: ordersaccrual.Config{
 				Address:     accrualURL,
 				HTTPTimeout: accrualHTTPTimeout,
 			},
