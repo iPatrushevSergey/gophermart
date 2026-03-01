@@ -4,39 +4,48 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/presentation/http/handler"
+	balancerouter "gophermart/internal/gophermart/modules/balance/presentation/http/router"
+	identityport "gophermart/internal/gophermart/modules/identity/application/port"
+	identityrouter "gophermart/internal/gophermart/modules/identity/presentation/http/router"
+	ordersrouter "gophermart/internal/gophermart/modules/orders/presentation/http/router"
 	"gophermart/internal/gophermart/presentation/http/middleware"
 )
+
+type identityTokenValidatorBridge struct {
+	tokens identityport.TokenProvider
+}
+
+func (a identityTokenValidatorBridge) Validate(token string) (int64, error) {
+	userID, err := a.tokens.Validate(token)
+	if err != nil {
+		return 0, err
+	}
+	return int64(userID), nil
+}
 
 // NewRouter builds the Gin engine with all routes and middleware (composition root).
 // Auth middleware applies only to routes registered inside the protected group.
 func NewRouter(
-	userHandler *handler.UserHandler,
-	orderHandler *handler.OrderHandler,
-	balanceHandler *handler.BalanceHandler,
-	tokens port.TokenProvider,
+	useCases UseCaseFactory,
+	tokens identityport.TokenProvider,
 	log port.Logger,
 ) *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Recovery())
-
-	// Middleware with injected strategies (OCP compliant)
-	r.Use(middleware.Compress(log, middleware.NewGzipCompressor()))
-	r.Use(middleware.Logger(log, nil)) // nil uses DefaultLogFormatter
+	globalParams := middleware.GlobalRegistryParams{
+		Log:    log,
+		Tokens: identityTokenValidatorBridge{tokens: tokens},
+	}
+	r.Use(middleware.BuildAppMiddleware(globalParams)...)
 
 	api := r.Group("/api/user")
 	{
-		api.POST("/register", userHandler.Register)
-		api.POST("/login", userHandler.Login)
+		identityrouter.RegisterPublicRoutes(api, useCases, tokens, log)
 
 		protected := api.Group("")
-		protected.Use(middleware.Auth(nil, tokens)) // nil uses BearerTokenExtractor
+		protected.Use(middleware.BuildProtectedMiddleware(globalParams)...)
 		{
-			protected.POST("/orders", orderHandler.Upload)
-			protected.GET("/orders", orderHandler.List)
-			protected.GET("/balance", balanceHandler.Get)
-			protected.POST("/balance/withdraw", balanceHandler.Withdraw)
-			protected.GET("/withdrawals", balanceHandler.ListWithdrawals)
+			ordersrouter.RegisterProtectedRoutes(protected, useCases, log)
+			balancerouter.RegisterProtectedRoutes(protected, useCases, log)
 		}
 	}
 	return r
