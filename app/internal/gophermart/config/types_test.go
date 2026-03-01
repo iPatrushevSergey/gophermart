@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddress_Set(t *testing.T) {
@@ -31,7 +32,7 @@ func TestAddress_Set(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.wantSchema, a.Schema)
 			assert.Equal(t, tt.wantHost, a.Host)
 			assert.Equal(t, tt.wantPort, a.Port)
@@ -50,14 +51,14 @@ func TestDuration_Set(t *testing.T) {
 	t.Run("integer seconds", func(t *testing.T) {
 		var d Duration
 		err := d.Set("60")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 60*time.Second, d.Duration)
 	})
 
 	t.Run("duration string", func(t *testing.T) {
 		var d Duration
 		err := d.Set("2h30m")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 2*time.Hour+30*time.Minute, d.Duration)
 	})
 
@@ -72,7 +73,7 @@ func TestBCryptCost_Set(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		var b BCryptCost
 		err := b.Set("10")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, BCryptCost(10), b)
 	})
 
