@@ -3,13 +3,11 @@ package api
 import (
 	"context"
 	"time"
-
-	"gophermart/internal/gophermart/domain/vo"
 )
 
 // OpenAccountInput is a module API input for creating a user's balance account.
 type OpenAccountInput struct {
-	UserID    vo.UserID
+	UserID    int64
 	CreatedAt time.Time
 }
 
