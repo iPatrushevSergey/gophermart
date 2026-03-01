@@ -1,49 +1,64 @@
 package bootstrap
 
 import (
+	"context"
 	"net/http"
+	"time"
 
-	"gophermart/internal/gophermart/adapters/accrual"
-	"gophermart/internal/gophermart/adapters/auth"
 	adapterclock "gophermart/internal/gophermart/adapters/clock"
 	"gophermart/internal/gophermart/adapters/repository/postgres"
-	"gophermart/internal/gophermart/adapters/validation"
 	"gophermart/internal/gophermart/application/port"
 	"gophermart/internal/gophermart/config"
-	"gophermart/internal/gophermart/domain/service"
-	"gophermart/internal/gophermart/presentation/http/handler"
-	"gophermart/internal/gophermart/presentation/worker"
+	balancerepopostgres "gophermart/internal/gophermart/modules/balance/adapters/repository/postgres"
+	balanceport "gophermart/internal/gophermart/modules/balance/application/port"
+	balanceservice "gophermart/internal/gophermart/modules/balance/domain/service"
+	balanceworker "gophermart/internal/gophermart/modules/balance/presentation/worker"
+	identityauth "gophermart/internal/gophermart/modules/identity/adapters/auth"
+	identityrepopostgres "gophermart/internal/gophermart/modules/identity/adapters/repository/postgres"
+	identityport "gophermart/internal/gophermart/modules/identity/application/port"
+	identityworker "gophermart/internal/gophermart/modules/identity/presentation/worker"
+	ordersaccrual "gophermart/internal/gophermart/modules/orders/adapters/accrual"
+	ordersrepopostgres "gophermart/internal/gophermart/modules/orders/adapters/repository/postgres"
+	ordersvalidation "gophermart/internal/gophermart/modules/orders/adapters/validation"
+	ordersport "gophermart/internal/gophermart/modules/orders/application/port"
+	ordersworker "gophermart/internal/gophermart/modules/orders/presentation/worker"
 )
 
 // App holds the HTTP server and dependencies.
 type App struct {
-	Server        *http.Server
-	AccrualWorker *worker.AccrualWorker
+	Server  *http.Server
+	workers []backgroundWorker
+}
+
+type repositories struct {
+	userRepo       identityport.UserRepository
+	orderRepo      ordersport.OrderRepository
+	balanceRepo    balanceport.BalanceAccountRepository
+	withdrawalRepo balanceport.WithdrawalRepository
+}
+
+type backgroundWorker interface {
+	Start(ctx context.Context)
 }
 
 // NewApp wires dependencies and returns the application (composition root).
 func NewApp(cfg config.Config, log port.Logger, transactor *postgres.Transactor) *App {
-	hasher := auth.NewBCryptHasher(cfg.Auth.BCryptCost)
-	tokens := auth.NewJWTProvider(cfg.Auth.JWTSecret, cfg.Auth.JWTTTL)
-	luhnValidator := validation.NewLuhnValidator()
+	hasher := identityauth.NewBCryptHasher(cfg.Auth.BCryptCost)
+	tokens := identityauth.NewJWTProvider(cfg.Auth.JWTSecret, cfg.Auth.JWTTTL)
+	luhnValidator := ordersvalidation.NewLuhnValidator()
 
-	accrualClient := accrual.NewClientFromConfig(cfg.Accrual.Client)
+	accrualClient := ordersaccrual.NewClientFromConfig(cfg.Accrual.Client)
+	repos := newRepositories(transactor)
 
-	userRepo := postgres.NewUserRepository(transactor)
-	orderRepo := postgres.NewOrderRepository(transactor)
-	balanceRepo := postgres.NewBalanceAccountRepository(transactor)
-	withdrawalRepo := postgres.NewWithdrawalRepository(transactor)
-
-	balanceSvc := service.BalanceService{}
+	balanceSvc := balanceservice.BalanceService{}
 	clk := adapterclock.Real{}
 
 	ucFactory := NewUseCaseFactory(
-		WithUserRepo(userRepo),
-		WithOrderRepo(orderRepo),
-		WithBalanceRepo(balanceRepo),
-		WithWithdrawalRepo(withdrawalRepo),
+		WithUserRepo(repos.userRepo),
+		WithOrderRepo(repos.orderRepo),
+		WithBalanceRepo(repos.balanceRepo),
+		WithWithdrawalRepo(repos.withdrawalRepo),
 		WithHasher(hasher),
-		WithTokens(tokens),
 		WithTransactor(transactor),
 		WithValidator(luhnValidator),
 		WithAccrualClient(accrualClient),
@@ -55,20 +70,62 @@ func NewApp(cfg config.Config, log port.Logger, transactor *postgres.Transactor)
 		WithOptimisticRetries(cfg.OptimisticRetries),
 	)
 
-	userHandler := handler.NewUserHandler(ucFactory, tokens, log)
-	orderHandler := handler.NewOrderHandler(ucFactory, log)
-	balanceHandler := handler.NewBalanceHandler(ucFactory, log)
+	router := NewRouter(ucFactory, tokens, log)
+	srv := newServer(cfg.Server.Address, router)
+	workers := newBackgroundWorkers(ucFactory, log, cfg.Accrual.PollInterval)
 
-	router := NewRouter(userHandler, orderHandler, balanceHandler, tokens, log)
+	return &App{Server: srv, workers: workers}
+}
 
-	srv := &http.Server{
-		Addr:    cfg.Server.Address,
+func newRepositories(transactor *postgres.Transactor) repositories {
+	return repositories{
+		userRepo:       identityrepopostgres.NewUserRepository(transactor),
+		orderRepo:      ordersrepopostgres.NewOrderRepository(transactor),
+		balanceRepo:    balancerepopostgres.NewBalanceAccountRepository(transactor),
+		withdrawalRepo: balancerepopostgres.NewWithdrawalRepository(transactor),
+	}
+}
+
+func newServer(address string, router http.Handler) *http.Server {
+	return &http.Server{
+		Addr:    address,
 		Handler: router,
 	}
+}
 
-	accrualWorker := worker.NewAccrualWorker(
-		ucFactory, log, cfg.Accrual.PollInterval,
+func newBackgroundWorkers(
+	ucFactory UseCaseFactory,
+	log port.Logger,
+	pollInterval time.Duration,
+) []backgroundWorker {
+	identityWorkers := identityworker.BuildWorkers(identityworker.RegistryParams{})
+	ordersWorkers := ordersworker.BuildWorkers(ordersworker.RegistryParams{
+		UseCases:     ucFactory,
+		Log:          log,
+		PollInterval: pollInterval,
+	})
+	balanceWorkers := balanceworker.BuildWorkers(balanceworker.RegistryParams{})
+
+	workers := make(
+		[]backgroundWorker,
+		0,
+		len(identityWorkers)+len(ordersWorkers)+len(balanceWorkers),
 	)
+	for _, w := range identityWorkers {
+		workers = append(workers, w)
+	}
+	for _, w := range ordersWorkers {
+		workers = append(workers, w)
+	}
+	for _, w := range balanceWorkers {
+		workers = append(workers, w)
+	}
+	return workers
+}
 
-	return &App{Server: srv, AccrualWorker: accrualWorker}
+// StartBackground starts all background workers.
+func (a *App) StartBackground(ctx context.Context) {
+	for _, w := range a.workers {
+		w.Start(ctx)
+	}
 }
