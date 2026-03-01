@@ -7,15 +7,23 @@ import (
 	"time"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
-	voMocks "gophermart/internal/gophermart/domain/vo/mocks"
+	appmocks "gophermart/internal/gophermart/application/port/mocks"
+	"gophermart/internal/gophermart/modules/balance/application/dto"
+	balanceportmocks "gophermart/internal/gophermart/modules/balance/application/port/mocks"
+	"gophermart/internal/gophermart/modules/balance/domain/entity"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+type stubOrderNumberValidator struct {
+	valid bool
+}
+
+func (s stubOrderNumberValidator) Valid(string) bool {
+	return s.valid
+}
 
 func TestWithdraw_Execute(t *testing.T) {
 	ctx := context.Background()
@@ -24,14 +32,13 @@ func TestWithdraw_Execute(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		balanceReader := mocks.NewMockBalanceAccountReader(ctrl)
-		balanceWriter := mocks.NewMockBalanceAccountWriter(ctrl)
-		withdrawalWriter := mocks.NewMockWithdrawalWriter(ctrl)
-		transactor := mocks.NewMockTransactor(ctrl)
-		validator := voMocks.NewMockOrderNumberValidator(ctrl)
-		clk := mocks.NewMockClock(ctrl)
+		balanceReader := balanceportmocks.NewMockBalanceAccountReader(ctrl)
+		balanceWriter := balanceportmocks.NewMockBalanceAccountWriter(ctrl)
+		withdrawalWriter := balanceportmocks.NewMockWithdrawalWriter(ctrl)
+		transactor := appmocks.NewMockTransactor(ctrl)
+		validator := stubOrderNumberValidator{valid: true}
+		clk := appmocks.NewMockClock(ctrl)
 
-		validator.EXPECT().Valid("2377225624").Return(true)
 		transactor.EXPECT().RunInTransaction(ctx, gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
 				return fn(ctx)
@@ -51,10 +58,7 @@ func TestWithdraw_Execute(t *testing.T) {
 	})
 
 	t.Run("invalid order number", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		validator := voMocks.NewMockOrderNumberValidator(ctrl)
-
-		validator.EXPECT().Valid("123").Return(false)
+		validator := stubOrderNumberValidator{valid: false}
 
 		uc := NewWithdraw(nil, nil, nil, nil, validator, nil, 3)
 		_, err := uc.Execute(ctx, dto.WithdrawInput{UserID: 1, OrderNumber: "123", Sum: 100})
@@ -65,12 +69,11 @@ func TestWithdraw_Execute(t *testing.T) {
 	t.Run("insufficient balance", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		balanceReader := mocks.NewMockBalanceAccountReader(ctrl)
-		transactor := mocks.NewMockTransactor(ctrl)
-		validator := voMocks.NewMockOrderNumberValidator(ctrl)
-		clk := mocks.NewMockClock(ctrl)
+		balanceReader := balanceportmocks.NewMockBalanceAccountReader(ctrl)
+		transactor := appmocks.NewMockTransactor(ctrl)
+		validator := stubOrderNumberValidator{valid: true}
+		clk := appmocks.NewMockClock(ctrl)
 
-		validator.EXPECT().Valid("2377225624").Return(true)
 		transactor.EXPECT().RunInTransaction(ctx, gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
 				return fn(ctx)
@@ -90,11 +93,10 @@ func TestWithdraw_Execute(t *testing.T) {
 	t.Run("repo error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		balanceReader := mocks.NewMockBalanceAccountReader(ctrl)
-		transactor := mocks.NewMockTransactor(ctrl)
-		validator := voMocks.NewMockOrderNumberValidator(ctrl)
+		balanceReader := balanceportmocks.NewMockBalanceAccountReader(ctrl)
+		transactor := appmocks.NewMockTransactor(ctrl)
+		validator := stubOrderNumberValidator{valid: true}
 
-		validator.EXPECT().Valid("2377225624").Return(true)
 		transactor.EXPECT().RunInTransaction(ctx, gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
 				return fn(ctx)
