@@ -5,10 +5,11 @@ import (
 	"errors"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/balance/application/dto"
+	"gophermart/internal/gophermart/modules/balance/application/port"
+	"gophermart/internal/gophermart/modules/balance/domain/entity"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
 )
 
 // Withdraw handles deducting points from the user's balance for an order.
@@ -16,9 +17,9 @@ type Withdraw struct {
 	balanceReader     port.BalanceAccountReader
 	balanceWriter     port.BalanceAccountWriter
 	withdrawalWriter  port.WithdrawalWriter
-	transactor        port.Transactor
+	transactor        appport.Transactor
 	validator         vo.OrderNumberValidator
-	clock             port.Clock
+	clock             appport.Clock
 	optimisticRetries int
 }
 
@@ -27,11 +28,11 @@ func NewWithdraw(
 	balanceReader port.BalanceAccountReader,
 	balanceWriter port.BalanceAccountWriter,
 	withdrawalWriter port.WithdrawalWriter,
-	transactor port.Transactor,
+	transactor appport.Transactor,
 	validator vo.OrderNumberValidator,
-	clock port.Clock,
+	clock appport.Clock,
 	optimisticRetries int,
-) port.UseCase[dto.WithdrawInput, struct{}] {
+) appport.UseCase[dto.WithdrawInput, struct{}] {
 	return &Withdraw{
 		balanceReader:     balanceReader,
 		balanceWriter:     balanceWriter,
