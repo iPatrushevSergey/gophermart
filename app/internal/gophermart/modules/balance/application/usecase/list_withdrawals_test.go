@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	balanceportmocks "gophermart/internal/gophermart/modules/balance/application/port/mocks"
+	"gophermart/internal/gophermart/modules/balance/domain/entity"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -20,7 +20,7 @@ func TestListWithdrawals_Execute(t *testing.T) {
 
 	t.Run("returns mapped withdrawals", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		reader := mocks.NewMockWithdrawalReader(ctrl)
+		reader := balanceportmocks.NewMockWithdrawalReader(ctrl)
 
 		now := time.Now()
 		reader.EXPECT().ListByUserID(ctx, userID).Return([]entity.Withdrawal{
@@ -40,7 +40,7 @@ func TestListWithdrawals_Execute(t *testing.T) {
 
 	t.Run("empty list", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		reader := mocks.NewMockWithdrawalReader(ctrl)
+		reader := balanceportmocks.NewMockWithdrawalReader(ctrl)
 
 		reader.EXPECT().ListByUserID(ctx, userID).Return(nil, nil)
 
@@ -53,7 +53,7 @@ func TestListWithdrawals_Execute(t *testing.T) {
 
 	t.Run("repo error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		reader := mocks.NewMockWithdrawalReader(ctrl)
+		reader := balanceportmocks.NewMockWithdrawalReader(ctrl)
 
 		reader.EXPECT().ListByUserID(ctx, userID).Return(nil, errors.New("db error"))
 
