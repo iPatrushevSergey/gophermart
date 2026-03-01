@@ -3,14 +3,12 @@ package api
 import (
 	"context"
 	"time"
-
-	"gophermart/internal/gophermart/domain/vo"
 )
 
 // ApplyAccrualInput is a module API input for crediting user balance from processed orders.
 type ApplyAccrualInput struct {
-	UserID      vo.UserID
-	Amount      vo.Points
+	UserID      int64
+	Amount      float64
 	ProcessedAt time.Time
 }
 
