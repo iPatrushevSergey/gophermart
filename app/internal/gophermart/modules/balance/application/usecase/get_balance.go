@@ -3,9 +3,10 @@ package usecase
 import (
 	"context"
 
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/vo"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/balance/application/dto"
+	"gophermart/internal/gophermart/modules/balance/application/port"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
 )
 
 // GetBalance returns the current balance for the given user.
@@ -14,7 +15,7 @@ type GetBalance struct {
 }
 
 // NewGetBalance returns the get balance use case.
-func NewGetBalance(balanceReader port.BalanceAccountReader) port.UseCase[vo.UserID, dto.BalanceOutput] {
+func NewGetBalance(balanceReader port.BalanceAccountReader) appport.UseCase[vo.UserID, dto.BalanceOutput] {
 	return &GetBalance{balanceReader: balanceReader}
 }
 
