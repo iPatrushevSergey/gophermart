@@ -3,8 +3,8 @@ package port
 import (
 	"context"
 
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/balance/domain/entity"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
 )
 
 // BalanceAccountReader provides read-only access to balance accounts for balance module.
