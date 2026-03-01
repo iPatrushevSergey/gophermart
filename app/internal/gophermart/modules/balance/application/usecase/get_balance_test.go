@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	balanceportmocks "gophermart/internal/gophermart/modules/balance/application/port/mocks"
+	"gophermart/internal/gophermart/modules/balance/domain/entity"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -20,7 +20,7 @@ func TestGetBalance_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		balanceReader := mocks.NewMockBalanceAccountReader(ctrl)
+		balanceReader := balanceportmocks.NewMockBalanceAccountReader(ctrl)
 
 		balanceReader.EXPECT().FindByUserID(ctx, userID).Return(&entity.BalanceAccount{
 			Current:        vo.Points(500),
@@ -37,7 +37,7 @@ func TestGetBalance_Execute(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		balanceReader := mocks.NewMockBalanceAccountReader(ctrl)
+		balanceReader := balanceportmocks.NewMockBalanceAccountReader(ctrl)
 
 		balanceReader.EXPECT().FindByUserID(ctx, userID).Return(nil, application.ErrNotFound)
 
@@ -49,7 +49,7 @@ func TestGetBalance_Execute(t *testing.T) {
 
 	t.Run("repo error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		balanceReader := mocks.NewMockBalanceAccountReader(ctrl)
+		balanceReader := balanceportmocks.NewMockBalanceAccountReader(ctrl)
 
 		balanceReader.EXPECT().FindByUserID(ctx, userID).Return(nil, errors.New("db error"))
 
