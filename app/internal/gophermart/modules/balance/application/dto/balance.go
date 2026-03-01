@@ -1,6 +1,6 @@
 package dto
 
-import "gophermart/internal/gophermart/domain/vo"
+import "gophermart/internal/gophermart/modules/balance/domain/vo"
 
 // BalanceOutput is the output for the user's current balance.
 type BalanceOutput struct {
