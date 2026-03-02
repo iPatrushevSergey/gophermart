@@ -7,15 +7,26 @@ import (
 	"time"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/service"
-	"gophermart/internal/gophermart/domain/vo"
+	appmocks "gophermart/internal/gophermart/application/port/mocks"
+	"gophermart/internal/gophermart/modules/identity/application/dto"
+	identityportmocks "gophermart/internal/gophermart/modules/identity/application/port/mocks"
+	"gophermart/internal/gophermart/modules/identity/domain/entity"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+type stubBalanceGateway struct {
+	openAccount func(ctx context.Context, userID vo.UserID, createdAt time.Time) error
+}
+
+func (s *stubBalanceGateway) OpenAccount(ctx context.Context, userID vo.UserID, createdAt time.Time) error {
+	if s.openAccount != nil {
+		return s.openAccount(ctx, userID, createdAt)
+	}
+	return nil
+}
 
 func TestRegisterUser_Execute(t *testing.T) {
 	ctx := context.Background()
@@ -25,12 +36,12 @@ func TestRegisterUser_Execute(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		userReader := mocks.NewMockUserReader(ctrl)
-		userWriter := mocks.NewMockUserWriter(ctrl)
-		balanceWriter := mocks.NewMockBalanceAccountWriter(ctrl)
-		transactor := mocks.NewMockTransactor(ctrl)
-		hasher := mocks.NewMockPasswordHasher(ctrl)
-		clk := mocks.NewMockClock(ctrl)
+		userReader := identityportmocks.NewMockUserReader(ctrl)
+		userWriter := identityportmocks.NewMockUserWriter(ctrl)
+		balanceGateway := &stubBalanceGateway{}
+		transactor := appmocks.NewMockTransactor(ctrl)
+		hasher := appmocks.NewMockPasswordHasher(ctrl)
+		clk := appmocks.NewMockClock(ctrl)
 
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(nil, application.ErrNotFound)
 		hasher.EXPECT().Hash("secret").Return("hashed", nil)
@@ -47,9 +58,13 @@ func TestRegisterUser_Execute(t *testing.T) {
 				return nil
 			},
 		)
-		balanceWriter.EXPECT().Create(ctx, gomock.Any()).Return(nil)
+		balanceGateway.openAccount = func(_ context.Context, userID vo.UserID, createdAt time.Time) error {
+			assert.Equal(t, vo.UserID(1), userID)
+			assert.Equal(t, fixedTime, createdAt)
+			return nil
+		}
 
-		uc := NewRegisterUser(userReader, userWriter, balanceWriter, transactor, hasher, clk, service.BalanceService{})
+		uc := NewRegisterUser(userReader, userWriter, balanceGateway, transactor, hasher, clk)
 		id, err := uc.Execute(ctx, input)
 
 		assert.NoError(t, err)
@@ -59,10 +74,10 @@ func TestRegisterUser_Execute(t *testing.T) {
 	t.Run("login already taken", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		userReader := mocks.NewMockUserReader(ctrl)
+		userReader := identityportmocks.NewMockUserReader(ctrl)
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(&entity.User{Login: "alice"}, nil)
 
-		uc := NewRegisterUser(userReader, nil, nil, nil, nil, nil, service.BalanceService{})
+		uc := NewRegisterUser(userReader, nil, nil, nil, nil, nil)
 		_, err := uc.Execute(ctx, input)
 
 		assert.ErrorIs(t, err, application.ErrAlreadyExists)
@@ -71,13 +86,13 @@ func TestRegisterUser_Execute(t *testing.T) {
 	t.Run("hash error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		userReader := mocks.NewMockUserReader(ctrl)
-		hasher := mocks.NewMockPasswordHasher(ctrl)
+		userReader := identityportmocks.NewMockUserReader(ctrl)
+		hasher := appmocks.NewMockPasswordHasher(ctrl)
 
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(nil, application.ErrNotFound)
 		hasher.EXPECT().Hash("secret").Return("", errors.New("hash failed"))
 
-		uc := NewRegisterUser(userReader, nil, nil, nil, hasher, nil, service.BalanceService{})
+		uc := NewRegisterUser(userReader, nil, nil, nil, hasher, nil)
 		_, err := uc.Execute(ctx, input)
 
 		assert.Error(t, err)
@@ -87,11 +102,11 @@ func TestRegisterUser_Execute(t *testing.T) {
 	t.Run("user repo create error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		userReader := mocks.NewMockUserReader(ctrl)
-		userWriter := mocks.NewMockUserWriter(ctrl)
-		transactor := mocks.NewMockTransactor(ctrl)
-		hasher := mocks.NewMockPasswordHasher(ctrl)
-		clk := mocks.NewMockClock(ctrl)
+		userReader := identityportmocks.NewMockUserReader(ctrl)
+		userWriter := identityportmocks.NewMockUserWriter(ctrl)
+		transactor := appmocks.NewMockTransactor(ctrl)
+		hasher := appmocks.NewMockPasswordHasher(ctrl)
+		clk := appmocks.NewMockClock(ctrl)
 
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(nil, application.ErrNotFound)
 		hasher.EXPECT().Hash("secret").Return("hashed", nil)
@@ -103,7 +118,7 @@ func TestRegisterUser_Execute(t *testing.T) {
 		)
 		userWriter.EXPECT().Create(ctx, gomock.Any()).Return(errors.New("db error"))
 
-		uc := NewRegisterUser(userReader, userWriter, nil, transactor, hasher, clk, service.BalanceService{})
+		uc := NewRegisterUser(userReader, userWriter, nil, transactor, hasher, clk)
 		_, err := uc.Execute(ctx, input)
 
 		assert.Error(t, err)
@@ -112,10 +127,10 @@ func TestRegisterUser_Execute(t *testing.T) {
 	t.Run("find by login unexpected error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		userReader := mocks.NewMockUserReader(ctrl)
+		userReader := identityportmocks.NewMockUserReader(ctrl)
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(nil, errors.New("connection lost"))
 
-		uc := NewRegisterUser(userReader, nil, nil, nil, nil, nil, service.BalanceService{})
+		uc := NewRegisterUser(userReader, nil, nil, nil, nil, nil)
 		_, err := uc.Execute(ctx, input)
 
 		assert.Error(t, err)
