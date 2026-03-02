@@ -4,10 +4,11 @@ import (
 	"net/http"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/presentation/factory"
-	httpdto "gophermart/internal/gophermart/presentation/http/dto"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/identity/application/dto"
+	"gophermart/internal/gophermart/modules/identity/application/port"
+	"gophermart/internal/gophermart/modules/identity/presentation/factory"
+	httpdto "gophermart/internal/gophermart/modules/identity/presentation/http/dto"
 	"gophermart/internal/gophermart/presentation/http/httpcontext"
 
 	"github.com/gin-gonic/gin"
@@ -15,14 +16,18 @@ import (
 
 // UserHandler manages registration and authentication requests.
 type UserHandler struct {
-	factory factory.UseCaseFactory
-	tokens  port.TokenProvider
-	log     port.Logger
+	useCases factory.UseCaseFactory
+	tokens   port.TokenProvider
+	log      appport.Logger
 }
 
-// NewUserHandler creates a UserHandler with use case factory, token provider and logger.
-func NewUserHandler(factory factory.UseCaseFactory, tokens port.TokenProvider, log port.Logger) *UserHandler {
-	return &UserHandler{factory: factory, tokens: tokens, log: log}
+// NewUserHandler creates a UserHandler with identity use cases provider.
+func NewUserHandler(useCases factory.UseCaseFactory, tokens port.TokenProvider, log appport.Logger) *UserHandler {
+	return &UserHandler{
+		useCases: useCases,
+		tokens:   tokens,
+		log:      log,
+	}
 }
 
 // Register creates a new user and issues an auth token.
@@ -32,7 +37,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	userID, err := h.factory.RegisterUseCase().Execute(
+	userID, err := h.useCases.RegisterUseCase().Execute(
 		c.Request.Context(),
 		dto.RegisterInput{Login: req.Login, Password: req.Password},
 	)
@@ -62,7 +67,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	userID, err := h.factory.LoginUseCase().Execute(
+	userID, err := h.useCases.LoginUseCase().Execute(
 		c.Request.Context(),
 		dto.LoginInput{Login: req.Login, Password: req.Password},
 	)
