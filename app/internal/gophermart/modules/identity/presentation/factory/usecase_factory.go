@@ -1,9 +1,9 @@
 package factory
 
 import (
-	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/identity/application/dto"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 )
 
 // UseCaseFactory provides identity use cases to the presentation layer.
