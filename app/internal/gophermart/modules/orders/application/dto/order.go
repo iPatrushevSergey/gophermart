@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
 )
 
 // UploadOrderInput is the input for uploading an order number.
