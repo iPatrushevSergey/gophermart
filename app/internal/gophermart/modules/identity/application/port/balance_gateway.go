@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 )
 
 // BalanceGateway is an identity-module port for opening user balance accounts.
