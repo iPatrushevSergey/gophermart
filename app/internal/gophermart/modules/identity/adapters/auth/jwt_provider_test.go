@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 
 	"github.com/stretchr/testify/assert"
 )
