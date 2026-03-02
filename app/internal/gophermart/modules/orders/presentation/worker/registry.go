@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"gophermart/internal/gophermart/application/port"
-	modulefactory "gophermart/internal/gophermart/modules/orders/presentation/factory"
+	"gophermart/internal/gophermart/modules/orders/presentation/factory"
 )
 
 // Starter describes a background worker that can be started with context.
@@ -15,7 +15,7 @@ type Starter interface {
 
 // RegistryParams contains dependencies required to build orders workers.
 type RegistryParams struct {
-	UseCases     modulefactory.UseCaseFactory
+	UseCases     factory.UseCaseFactory
 	Log          port.Logger
 	PollInterval time.Duration
 }
