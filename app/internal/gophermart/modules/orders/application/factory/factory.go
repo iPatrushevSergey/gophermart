@@ -1,21 +1,22 @@
 package factory
 
 import (
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/vo"
-	ordersusecase "gophermart/internal/gophermart/modules/orders/application/usecase"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/orders/application/dto"
+	"gophermart/internal/gophermart/modules/orders/application/port"
+	"gophermart/internal/gophermart/modules/orders/application/usecase"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
 )
 
 // Params contains dependencies required to build orders use cases.
 type Params struct {
 	OrderRepo         port.OrderRepository
-	BalanceRepo       port.BalanceAccountRepository
+	BalanceGateway    port.BalanceGateway
 	Validator         vo.OrderNumberValidator
 	AccrualClient     port.AccrualClient
-	Transactor        port.Transactor
-	Clock             port.Clock
-	Log               port.Logger
+	Transactor        appport.Transactor
+	Clock             appport.Clock
+	Log               appport.Logger
 	BatchSize         int
 	MaxWorkers        int
 	OptimisticRetries int
@@ -23,18 +24,18 @@ type Params struct {
 
 // UseCases holds orders module use cases exposed to composition root.
 type UseCases struct {
-	UploadOrder    port.UseCase[dto.UploadOrderInput, struct{}]
-	ListOrders     port.UseCase[vo.UserID, []dto.OrderOutput]
-	ProcessAccrual port.BackgroundRunner
+	UploadOrder    appport.UseCase[dto.UploadOrderInput, struct{}]
+	ListOrders     appport.UseCase[vo.UserID, []dto.OrderOutput]
+	ProcessAccrual appport.BackgroundRunner
 }
 
 // NewUseCases builds orders module use cases.
 func NewUseCases(p Params) UseCases {
 	return UseCases{
-		UploadOrder: ordersusecase.NewUploadOrder(p.OrderRepo, p.OrderRepo, p.Validator, p.Clock),
-		ListOrders:  ordersusecase.NewListOrders(p.OrderRepo),
-		ProcessAccrual: ordersusecase.NewProcessAccrual(
-			p.OrderRepo, p.OrderRepo, p.BalanceRepo, p.BalanceRepo, p.AccrualClient,
+		UploadOrder: usecase.NewUploadOrder(p.OrderRepo, p.OrderRepo, p.Validator, p.Clock),
+		ListOrders:  usecase.NewListOrders(p.OrderRepo),
+		ProcessAccrual: usecase.NewProcessAccrual(
+			p.OrderRepo, p.OrderRepo, p.BalanceGateway, p.AccrualClient,
 			p.Transactor, p.Clock, p.Log, p.BatchSize, p.MaxWorkers, p.OptimisticRetries,
 		),
 	}
