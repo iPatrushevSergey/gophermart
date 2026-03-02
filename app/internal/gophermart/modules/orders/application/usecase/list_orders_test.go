@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	ordersportmocks "gophermart/internal/gophermart/modules/orders/application/port/mocks"
+	"gophermart/internal/gophermart/modules/orders/domain/entity"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -20,7 +20,7 @@ func TestListOrders_Execute(t *testing.T) {
 
 	t.Run("returns mapped orders", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		orderReader := mocks.NewMockOrderReader(ctrl)
+		orderReader := ordersportmocks.NewMockOrderReader(ctrl)
 
 		accrual := vo.Points(500)
 		now := time.Now()
@@ -43,7 +43,7 @@ func TestListOrders_Execute(t *testing.T) {
 
 	t.Run("empty list", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		orderReader := mocks.NewMockOrderReader(ctrl)
+		orderReader := ordersportmocks.NewMockOrderReader(ctrl)
 
 		orderReader.EXPECT().ListByUserID(ctx, userID).Return(nil, nil)
 
@@ -56,7 +56,7 @@ func TestListOrders_Execute(t *testing.T) {
 
 	t.Run("repo error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		orderReader := mocks.NewMockOrderReader(ctrl)
+		orderReader := ordersportmocks.NewMockOrderReader(ctrl)
 
 		orderReader.EXPECT().ListByUserID(ctx, userID).Return(nil, errors.New("db error"))
 
