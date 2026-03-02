@@ -7,15 +7,23 @@ import (
 	"time"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
-	voMocks "gophermart/internal/gophermart/domain/vo/mocks"
+	appmocks "gophermart/internal/gophermart/application/port/mocks"
+	"gophermart/internal/gophermart/modules/orders/application/dto"
+	ordersportmocks "gophermart/internal/gophermart/modules/orders/application/port/mocks"
+	"gophermart/internal/gophermart/modules/orders/domain/entity"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+type stubOrderNumberValidator struct {
+	valid bool
+}
+
+func (s stubOrderNumberValidator) Valid(string) bool {
+	return s.valid
+}
 
 func TestUploadOrder_Execute(t *testing.T) {
 	ctx := context.Background()
@@ -24,12 +32,11 @@ func TestUploadOrder_Execute(t *testing.T) {
 	t.Run("new order accepted", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		orderReader := mocks.NewMockOrderReader(ctrl)
-		orderWriter := mocks.NewMockOrderWriter(ctrl)
-		validator := voMocks.NewMockOrderNumberValidator(ctrl)
-		clk := mocks.NewMockClock(ctrl)
+		orderReader := ordersportmocks.NewMockOrderReader(ctrl)
+		orderWriter := ordersportmocks.NewMockOrderWriter(ctrl)
+		validator := stubOrderNumberValidator{valid: true}
+		clk := appmocks.NewMockClock(ctrl)
 
-		validator.EXPECT().Valid("12345678903").Return(true)
 		orderReader.EXPECT().FindByNumber(ctx, vo.OrderNumber("12345678903")).Return(nil, application.ErrNotFound)
 		clk.EXPECT().Now().Return(fixedTime)
 		orderWriter.EXPECT().Create(ctx, gomock.Any()).DoAndReturn(
@@ -48,10 +55,8 @@ func TestUploadOrder_Execute(t *testing.T) {
 	t.Run("already uploaded by same user", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		orderReader := mocks.NewMockOrderReader(ctrl)
-		validator := voMocks.NewMockOrderNumberValidator(ctrl)
-
-		validator.EXPECT().Valid("12345678903").Return(true)
+		orderReader := ordersportmocks.NewMockOrderReader(ctrl)
+		validator := stubOrderNumberValidator{valid: true}
 		orderReader.EXPECT().FindByNumber(ctx, vo.OrderNumber("12345678903")).Return(
 			&entity.Order{UserID: vo.UserID(1)}, nil,
 		)
@@ -65,10 +70,8 @@ func TestUploadOrder_Execute(t *testing.T) {
 	t.Run("conflict with another user", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		orderReader := mocks.NewMockOrderReader(ctrl)
-		validator := voMocks.NewMockOrderNumberValidator(ctrl)
-
-		validator.EXPECT().Valid("12345678903").Return(true)
+		orderReader := ordersportmocks.NewMockOrderReader(ctrl)
+		validator := stubOrderNumberValidator{valid: true}
 		orderReader.EXPECT().FindByNumber(ctx, vo.OrderNumber("12345678903")).Return(
 			&entity.Order{UserID: vo.UserID(2)}, nil,
 		)
@@ -80,10 +83,7 @@ func TestUploadOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("invalid order number", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-
-		validator := voMocks.NewMockOrderNumberValidator(ctrl)
-		validator.EXPECT().Valid("123").Return(false)
+		validator := stubOrderNumberValidator{valid: false}
 
 		uc := NewUploadOrder(nil, nil, validator, nil)
 		_, err := uc.Execute(ctx, dto.UploadOrderInput{UserID: 1, OrderNumber: "123"})
@@ -94,10 +94,8 @@ func TestUploadOrder_Execute(t *testing.T) {
 	t.Run("repo error on find", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		orderReader := mocks.NewMockOrderReader(ctrl)
-		validator := voMocks.NewMockOrderNumberValidator(ctrl)
-
-		validator.EXPECT().Valid("12345678903").Return(true)
+		orderReader := ordersportmocks.NewMockOrderReader(ctrl)
+		validator := stubOrderNumberValidator{valid: true}
 		orderReader.EXPECT().FindByNumber(ctx, vo.OrderNumber("12345678903")).Return(nil, errors.New("db error"))
 
 		uc := NewUploadOrder(orderReader, nil, validator, nil)
