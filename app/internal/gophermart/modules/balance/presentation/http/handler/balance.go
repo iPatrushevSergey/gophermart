@@ -8,22 +8,26 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/presentation/factory"
-	httpdto "gophermart/internal/gophermart/presentation/http/dto"
+	"gophermart/internal/gophermart/modules/balance/application/dto"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
+	"gophermart/internal/gophermart/modules/balance/presentation/factory"
+	httpdto "gophermart/internal/gophermart/modules/balance/presentation/http/dto"
 	"gophermart/internal/gophermart/presentation/http/httpcontext"
 )
 
 // BalanceHandler manages balance and withdrawal requests.
 type BalanceHandler struct {
-	factory factory.UseCaseFactory
-	log     port.Logger
+	useCases factory.UseCaseFactory
+	log      port.Logger
 }
 
-// NewBalanceHandler creates a BalanceHandler.
-func NewBalanceHandler(factory factory.UseCaseFactory, log port.Logger) *BalanceHandler {
-	return &BalanceHandler{factory: factory, log: log}
+// NewBalanceHandler creates a BalanceHandler with balance use cases provider.
+func NewBalanceHandler(useCases factory.UseCaseFactory, log port.Logger) *BalanceHandler {
+	return &BalanceHandler{
+		useCases: useCases,
+		log:      log,
+	}
 }
 
 // Get returns the current loyalty balance of the authenticated user.
@@ -34,7 +38,7 @@ func (h *BalanceHandler) Get(c *gin.Context) {
 		return
 	}
 
-	balance, err := h.factory.GetBalanceUseCase().Execute(c.Request.Context(), userID)
+	balance, err := h.useCases.GetBalanceUseCase().Execute(c.Request.Context(), vo.UserID(userID))
 	if err != nil {
 		h.log.Error("get balance failed", "error", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -61,9 +65,9 @@ func (h *BalanceHandler) Withdraw(c *gin.Context) {
 		return
 	}
 
-	_, err := h.factory.WithdrawUseCase().Execute(
+	_, err := h.useCases.WithdrawUseCase().Execute(
 		c.Request.Context(),
-		dto.WithdrawInput{UserID: userID, OrderNumber: req.Order, Sum: req.Sum},
+		dto.WithdrawInput{UserID: vo.UserID(userID), OrderNumber: req.Order, Sum: req.Sum},
 	)
 	if err != nil {
 		switch {
@@ -89,7 +93,7 @@ func (h *BalanceHandler) ListWithdrawals(c *gin.Context) {
 		return
 	}
 
-	withdrawals, err := h.factory.ListWithdrawalsUseCase().Execute(c.Request.Context(), userID)
+	withdrawals, err := h.useCases.ListWithdrawalsUseCase().Execute(c.Request.Context(), vo.UserID(userID))
 	if err != nil {
 		h.log.Error("list withdrawals failed", "error", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
