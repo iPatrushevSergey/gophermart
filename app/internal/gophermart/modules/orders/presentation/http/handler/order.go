@@ -10,10 +10,11 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/presentation/factory"
-	httpdto "gophermart/internal/gophermart/presentation/http/dto"
+	"gophermart/internal/gophermart/modules/orders/application/dto"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
+	"gophermart/internal/gophermart/modules/orders/presentation/factory"
+	httpdto "gophermart/internal/gophermart/modules/orders/presentation/http/dto"
 	"gophermart/internal/gophermart/presentation/http/httpcontext"
 )
 
@@ -22,13 +23,16 @@ const maxOrderNumberBytes = 64
 
 // OrderHandler manages order-related requests.
 type OrderHandler struct {
-	factory factory.UseCaseFactory
-	log     port.Logger
+	useCases factory.UseCaseFactory
+	log      port.Logger
 }
 
-// NewOrderHandler creates an OrderHandler.
-func NewOrderHandler(factory factory.UseCaseFactory, log port.Logger) *OrderHandler {
-	return &OrderHandler{factory: factory, log: log}
+// NewOrderHandler creates an OrderHandler with orders use cases provider.
+func NewOrderHandler(useCases factory.UseCaseFactory, log port.Logger) *OrderHandler {
+	return &OrderHandler{
+		useCases: useCases,
+		log:      log,
+	}
 }
 
 // Upload accepts an order number for accrual calculation.
@@ -51,9 +55,9 @@ func (h *OrderHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	_, err = h.factory.UploadOrderUseCase().Execute(
+	_, err = h.useCases.UploadOrderUseCase().Execute(
 		c.Request.Context(),
-		dto.UploadOrderInput{UserID: userID, OrderNumber: orderNumber},
+		dto.UploadOrderInput{UserID: vo.UserID(userID), OrderNumber: orderNumber},
 	)
 	if err != nil {
 		switch {
@@ -81,7 +85,7 @@ func (h *OrderHandler) List(c *gin.Context) {
 		return
 	}
 
-	orders, err := h.factory.ListOrdersUseCase().Execute(c.Request.Context(), userID)
+	orders, err := h.useCases.ListOrdersUseCase().Execute(c.Request.Context(), vo.UserID(userID))
 	if err != nil {
 		h.log.Error("list orders failed", "error", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
