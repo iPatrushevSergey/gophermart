@@ -4,19 +4,20 @@ import (
 	"context"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/vo"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/identity/application/dto"
+	"gophermart/internal/gophermart/modules/identity/application/port"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 )
 
 // LoginUser authenticates by login and password.
 type LoginUser struct {
 	userReader port.UserReader
-	hasher     port.PasswordHasher
+	hasher     appport.PasswordHasher
 }
 
 // NewLoginUser returns the login use case (interactor) as port abstraction.
-func NewLoginUser(userReader port.UserReader, hasher port.PasswordHasher) port.UseCase[dto.LoginInput, vo.UserID] {
+func NewLoginUser(userReader port.UserReader, hasher appport.PasswordHasher) appport.UseCase[dto.LoginInput, vo.UserID] {
 	return &LoginUser{userReader: userReader, hasher: hasher}
 }
 
