@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	appmocks "gophermart/internal/gophermart/application/port/mocks"
+	"gophermart/internal/gophermart/modules/identity/application/dto"
+	identityportmocks "gophermart/internal/gophermart/modules/identity/application/port/mocks"
+	"gophermart/internal/gophermart/modules/identity/domain/entity"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -22,8 +23,8 @@ func TestLoginUser_Execute(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		userReader := mocks.NewMockUserReader(ctrl)
-		hasher := mocks.NewMockPasswordHasher(ctrl)
+		userReader := identityportmocks.NewMockUserReader(ctrl)
+		hasher := appmocks.NewMockPasswordHasher(ctrl)
 
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(&entity.User{
 			ID: vo.UserID(1), Login: "alice", PasswordHash: "hashed",
@@ -40,7 +41,7 @@ func TestLoginUser_Execute(t *testing.T) {
 	t.Run("user not found", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		userReader := mocks.NewMockUserReader(ctrl)
+		userReader := identityportmocks.NewMockUserReader(ctrl)
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(nil, nil)
 
 		uc := NewLoginUser(userReader, nil)
@@ -52,8 +53,8 @@ func TestLoginUser_Execute(t *testing.T) {
 	t.Run("wrong password", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		userReader := mocks.NewMockUserReader(ctrl)
-		hasher := mocks.NewMockPasswordHasher(ctrl)
+		userReader := identityportmocks.NewMockUserReader(ctrl)
+		hasher := appmocks.NewMockPasswordHasher(ctrl)
 
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(&entity.User{
 			ID: vo.UserID(1), PasswordHash: "hashed",
@@ -69,7 +70,7 @@ func TestLoginUser_Execute(t *testing.T) {
 	t.Run("repo error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
-		userReader := mocks.NewMockUserReader(ctrl)
+		userReader := identityportmocks.NewMockUserReader(ctrl)
 		userReader.EXPECT().FindByLogin(ctx, "alice").Return(nil, errors.New("db error"))
 
 		uc := NewLoginUser(userReader, nil)
