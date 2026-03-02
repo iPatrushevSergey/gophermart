@@ -14,11 +14,12 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
 	portmocks "gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/vo"
-	identityhandler "gophermart/internal/gophermart/modules/identity/presentation/http/handler"
+	"gophermart/internal/gophermart/modules/identity/application/dto"
+	identityportmocks "gophermart/internal/gophermart/modules/identity/application/port/mocks"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
+	"gophermart/internal/gophermart/modules/identity/presentation/http/handler"
 	"gophermart/internal/gophermart/presentation/http/httpcontext"
 )
 
@@ -45,15 +46,15 @@ func (f *testIdentityFactory) LoginUseCase() port.UseCase[dto.LoginInput, vo.Use
 	return f.loginUC
 }
 
-func setupUserRouter(t *testing.T) (*gomock.Controller, *testIdentityFactory, *portmocks.MockTokenProvider, *gin.Engine) {
+func setupUserRouter(t *testing.T) (*gomock.Controller, *testIdentityFactory, *identityportmocks.MockTokenProvider, *gin.Engine) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	factory := &testIdentityFactory{}
-	tokens := portmocks.NewMockTokenProvider(ctrl)
+	tokens := identityportmocks.NewMockTokenProvider(ctrl)
 	log := portmocks.NewMockLogger(ctrl)
 	log.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
 
-	h := identityhandler.NewUserHandler(factory, tokens, log)
+	h := handler.NewUserHandler(factory, tokens, log)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
