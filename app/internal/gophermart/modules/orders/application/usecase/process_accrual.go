@@ -8,21 +8,21 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/orders/application/port"
+	"gophermart/internal/gophermart/modules/orders/domain/entity"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
 )
 
 // ProcessAccrual fetches pending orders and synchronizes their status with the accrual system.
 type ProcessAccrual struct {
 	orderReader       port.OrderReader
 	orderWriter       port.OrderWriter
-	balanceReader     port.BalanceAccountReader
-	balanceWriter     port.BalanceAccountWriter
+	balanceGateway    port.BalanceGateway
 	accrualClient     port.AccrualClient
-	transactor        port.Transactor
-	clock             port.Clock
-	log               port.Logger
+	transactor        appport.Transactor
+	clock             appport.Clock
+	log               appport.Logger
 	batchSize         int
 	maxWorkers        int
 	optimisticRetries int
@@ -32,12 +32,11 @@ type ProcessAccrual struct {
 func NewProcessAccrual(
 	orderReader port.OrderReader,
 	orderWriter port.OrderWriter,
-	balanceReader port.BalanceAccountReader,
-	balanceWriter port.BalanceAccountWriter,
+	balanceGateway port.BalanceGateway,
 	accrualClient port.AccrualClient,
-	transactor port.Transactor,
-	clock port.Clock,
-	log port.Logger,
+	transactor appport.Transactor,
+	clock appport.Clock,
+	log appport.Logger,
 	batchSize int,
 	maxWorkers int,
 	optimisticRetries int,
@@ -45,8 +44,7 @@ func NewProcessAccrual(
 	return &ProcessAccrual{
 		orderReader:       orderReader,
 		orderWriter:       orderWriter,
-		balanceReader:     balanceReader,
-		balanceWriter:     balanceWriter,
+		balanceGateway:    balanceGateway,
 		accrualClient:     accrualClient,
 		transactor:        transactor,
 		clock:             clock,
@@ -157,13 +155,7 @@ func (uc *ProcessAccrual) processOrder(ctx context.Context, order entity.Order) 
 					return nil
 				}
 
-				acc, err := uc.balanceReader.FindByUserID(ctx, order.UserID)
-				if err != nil {
-					return err
-				}
-
-				acc.AddAccrual(accrual, now)
-				return uc.balanceWriter.Update(ctx, acc)
+				return uc.balanceGateway.ApplyAccrual(ctx, order.UserID, accrual, now)
 			})
 		})
 	}
