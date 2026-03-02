@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"gophermart/internal/gophermart/application/port"
 	"gophermart/internal/gophermart/presentation/http/httpcontext"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +12,11 @@ import (
 // TokenExtractor abstraction for retrieving auth token from request.
 type TokenExtractor interface {
 	Extract(c *gin.Context) (string, error)
+}
+
+// TokenValidator validates token and returns user ID.
+type TokenValidator interface {
+	Validate(token string) (int64, error)
 }
 
 // BearerTokenExtractor extracts token from "token" Cookie or "Authorization: Bearer" header.
@@ -33,7 +37,7 @@ func (e *BearerTokenExtractor) Extract(c *gin.Context) (string, error) {
 }
 
 // Auth middleware with injected strategy.
-func Auth(extractor TokenExtractor, tokens port.TokenProvider) gin.HandlerFunc {
+func Auth(extractor TokenExtractor, tokens TokenValidator) gin.HandlerFunc {
 	if extractor == nil {
 		extractor = &BearerTokenExtractor{}
 	}
