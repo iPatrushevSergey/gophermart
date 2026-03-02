@@ -3,19 +3,20 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 
-	"gophermart/internal/gophermart/application/port"
-	modulefactory "gophermart/internal/gophermart/modules/identity/presentation/factory"
-	identityhandler "gophermart/internal/gophermart/modules/identity/presentation/http/handler"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/identity/application/port"
+	"gophermart/internal/gophermart/modules/identity/presentation/factory"
+	"gophermart/internal/gophermart/modules/identity/presentation/http/handler"
 )
 
 // RegisterPublicRoutes registers public identity endpoints.
 func RegisterPublicRoutes(
 	api *gin.RouterGroup,
-	useCases modulefactory.UseCaseFactory,
+	useCases factory.UseCaseFactory,
 	tokens port.TokenProvider,
-	log port.Logger,
+	log appport.Logger,
 ) {
-	userHandler := identityhandler.NewUserHandler(useCases, tokens, log)
+	userHandler := handler.NewUserHandler(useCases, tokens, log)
 	api.POST("/register", userHandler.Register)
 	api.POST("/login", userHandler.Login)
 }
