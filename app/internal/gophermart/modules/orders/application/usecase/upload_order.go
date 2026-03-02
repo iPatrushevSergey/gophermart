@@ -4,10 +4,11 @@ import (
 	"context"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/orders/application/dto"
+	"gophermart/internal/gophermart/modules/orders/application/port"
+	"gophermart/internal/gophermart/modules/orders/domain/entity"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
 )
 
 // UploadOrder handles uploading a new order number for accrual calculation.
@@ -15,7 +16,7 @@ type UploadOrder struct {
 	orderReader port.OrderReader
 	orderWriter port.OrderWriter
 	validator   vo.OrderNumberValidator
-	clock       port.Clock
+	clock       appport.Clock
 }
 
 // NewUploadOrder returns the upload order use case.
@@ -23,8 +24,8 @@ func NewUploadOrder(
 	orderReader port.OrderReader,
 	orderWriter port.OrderWriter,
 	validator vo.OrderNumberValidator,
-	clock port.Clock,
-) port.UseCase[dto.UploadOrderInput, struct{}] {
+	clock appport.Clock,
+) appport.UseCase[dto.UploadOrderInput, struct{}] {
 	return &UploadOrder{orderReader: orderReader, orderWriter: orderWriter, validator: validator, clock: clock}
 }
 
