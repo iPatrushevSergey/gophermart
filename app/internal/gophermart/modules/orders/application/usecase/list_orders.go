@@ -3,9 +3,10 @@ package usecase
 import (
 	"context"
 
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/vo"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/orders/application/dto"
+	"gophermart/internal/gophermart/modules/orders/application/port"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
 )
 
 // ListOrders returns all orders uploaded by the given user.
@@ -14,7 +15,7 @@ type ListOrders struct {
 }
 
 // NewListOrders returns the list orders use case.
-func NewListOrders(orderReader port.OrderReader) port.UseCase[vo.UserID, []dto.OrderOutput] {
+func NewListOrders(orderReader port.OrderReader) appport.UseCase[vo.UserID, []dto.OrderOutput] {
 	return &ListOrders{orderReader: orderReader}
 }
 
