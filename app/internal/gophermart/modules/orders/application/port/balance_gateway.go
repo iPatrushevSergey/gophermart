@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
 )
 
 // BalanceGateway is an orders-module port for cross-module balance accrual updates.
