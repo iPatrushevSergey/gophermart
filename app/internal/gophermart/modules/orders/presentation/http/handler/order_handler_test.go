@@ -14,11 +14,11 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
 	portmocks "gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/vo"
-	ordershandler "gophermart/internal/gophermart/modules/orders/presentation/http/handler"
+	"gophermart/internal/gophermart/modules/orders/application/dto"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
+	"gophermart/internal/gophermart/modules/orders/presentation/http/handler"
 	"gophermart/internal/gophermart/presentation/http/httpcontext"
 )
 
@@ -56,12 +56,12 @@ func setupOrderRouter(t *testing.T) (*gomock.Controller, *testOrdersFactory, *gi
 	log := portmocks.NewMockLogger(ctrl)
 	log.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
 
-	h := ordershandler.NewOrderHandler(factory, log)
+	h := handler.NewOrderHandler(factory, log)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 
-	authSim := func(userID vo.UserID) gin.HandlerFunc {
+	authSim := func(userID int64) gin.HandlerFunc {
 		return func(c *gin.Context) {
 			c.Set(httpcontext.UserIDKey, userID)
 			c.Next()
