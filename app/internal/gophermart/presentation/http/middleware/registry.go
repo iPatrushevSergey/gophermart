@@ -9,7 +9,7 @@ import (
 // GlobalRegistryParams contains dependencies required to build global middleware.
 type GlobalRegistryParams struct {
 	Log    port.Logger
-	Tokens port.TokenProvider
+	Tokens TokenValidator
 }
 
 // BuildAppMiddleware builds middleware for the whole HTTP app.
