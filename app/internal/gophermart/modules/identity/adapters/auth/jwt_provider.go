@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/identity/application/port"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 
 	"github.com/golang-jwt/jwt/v5"
 )
