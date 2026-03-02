@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"gophermart/internal/gophermart/domain/vo"
 	balanceapi "gophermart/internal/gophermart/modules/balance/application/api"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 )
 
 // BalanceGatewayAdapter bridges identity module to balance module account API.
@@ -19,7 +19,7 @@ func NewBalanceGatewayAdapter(api balanceapi.AccountAPI) *BalanceGatewayAdapter 
 
 func (a *BalanceGatewayAdapter) OpenAccount(ctx context.Context, userID vo.UserID, createdAt time.Time) error {
 	return a.api.OpenAccount(ctx, balanceapi.OpenAccountInput{
-		UserID:    userID,
+		UserID:    int64(userID),
 		CreatedAt: createdAt,
 	})
 }
