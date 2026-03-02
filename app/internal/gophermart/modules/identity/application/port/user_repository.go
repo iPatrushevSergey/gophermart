@@ -3,8 +3,8 @@ package port
 import (
 	"context"
 
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/identity/domain/entity"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 )
 
 // UserReader provides read-only access to users for identity module.
