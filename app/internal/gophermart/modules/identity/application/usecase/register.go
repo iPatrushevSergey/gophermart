@@ -4,42 +4,39 @@ import (
 	"context"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
-	"gophermart/internal/gophermart/application/port"
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/service"
-	"gophermart/internal/gophermart/domain/vo"
+	appport "gophermart/internal/gophermart/application/port"
+	"gophermart/internal/gophermart/modules/identity/application/dto"
+	"gophermart/internal/gophermart/modules/identity/application/port"
+	"gophermart/internal/gophermart/modules/identity/domain/entity"
+	"gophermart/internal/gophermart/modules/identity/domain/vo"
 )
 
 // RegisterUser registers a new user and creates an initial balance account.
 type RegisterUser struct {
-	userReader    port.UserReader
-	userWriter    port.UserWriter
-	balanceWriter port.BalanceAccountWriter
-	transactor    port.Transactor
-	hasher        port.PasswordHasher
-	clock         port.Clock
-	balanceSvc    service.BalanceService
+	userReader     port.UserReader
+	userWriter     port.UserWriter
+	balanceGateway port.BalanceGateway
+	transactor     appport.Transactor
+	hasher         appport.PasswordHasher
+	clock          appport.Clock
 }
 
 // NewRegisterUser returns the register use case (interactor) as port abstraction.
 func NewRegisterUser(
 	userReader port.UserReader,
 	userWriter port.UserWriter,
-	balanceWriter port.BalanceAccountWriter,
-	transactor port.Transactor,
-	hasher port.PasswordHasher,
-	clock port.Clock,
-	balanceSvc service.BalanceService,
-) port.UseCase[dto.RegisterInput, vo.UserID] {
+	balanceGateway port.BalanceGateway,
+	transactor appport.Transactor,
+	hasher appport.PasswordHasher,
+	clock appport.Clock,
+) appport.UseCase[dto.RegisterInput, vo.UserID] {
 	return &RegisterUser{
-		userReader:    userReader,
-		userWriter:    userWriter,
-		balanceWriter: balanceWriter,
-		transactor:    transactor,
-		hasher:        hasher,
-		clock:         clock,
-		balanceSvc:    balanceSvc,
+		userReader:     userReader,
+		userWriter:     userWriter,
+		balanceGateway: balanceGateway,
+		transactor:     transactor,
+		hasher:         hasher,
+		clock:          clock,
 	}
 }
 
@@ -69,8 +66,7 @@ func (uc *RegisterUser) Execute(ctx context.Context, in dto.RegisterInput) (vo.U
 			return err
 		}
 
-		acc := uc.balanceSvc.CreateAccount(u.ID, now)
-		return uc.balanceWriter.Create(ctx, acc)
+		return uc.balanceGateway.OpenAccount(ctx, u.ID, now)
 	})
 	if err != nil {
 		return 0, err
