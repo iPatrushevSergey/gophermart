@@ -15,11 +15,11 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"gophermart/internal/gophermart/application"
-	"gophermart/internal/gophermart/application/dto"
 	"gophermart/internal/gophermart/application/port"
 	portmocks "gophermart/internal/gophermart/application/port/mocks"
-	"gophermart/internal/gophermart/domain/vo"
-	balancehandler "gophermart/internal/gophermart/modules/balance/presentation/http/handler"
+	"gophermart/internal/gophermart/modules/balance/application/dto"
+	"gophermart/internal/gophermart/modules/balance/domain/vo"
+	"gophermart/internal/gophermart/modules/balance/presentation/http/handler"
 	"gophermart/internal/gophermart/presentation/http/httpcontext"
 )
 
@@ -57,12 +57,12 @@ func setupBalanceRouter(t *testing.T) (*gomock.Controller, *testBalanceFactory, 
 	log := portmocks.NewMockLogger(ctrl)
 	log.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
 
-	h := balancehandler.NewBalanceHandler(factory, log)
+	h := handler.NewBalanceHandler(factory, log)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 
-	authSim := func(userID vo.UserID) gin.HandlerFunc {
+	authSim := func(userID int64) gin.HandlerFunc {
 		return func(c *gin.Context) {
 			c.Set(httpcontext.UserIDKey, userID)
 			c.Next()
