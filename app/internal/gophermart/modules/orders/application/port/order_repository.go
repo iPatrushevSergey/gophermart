@@ -4,8 +4,8 @@ import (
 	"context"
 	"iter"
 
-	"gophermart/internal/gophermart/domain/entity"
-	"gophermart/internal/gophermart/domain/vo"
+	"gophermart/internal/gophermart/modules/orders/domain/entity"
+	"gophermart/internal/gophermart/modules/orders/domain/vo"
 )
 
 // OrderReader provides read-only access to orders for orders module.
